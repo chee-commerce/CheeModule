@@ -120,10 +120,27 @@ class CheeModule
         return false;
     }
 
-    public function getListModules()
+    public function getListAllModules()
+    {
+        $modulesModel = ModuleModel::all();
+        return $this->getListModules($modulesModel);
+    }
+
+    public function getListEnabledModules()
+    {
+        $modulesModel = ModuleModel::where('status', 1)->get();
+        return $this->getListModules($modulesModel);
+    }
+
+    public function getListDisabledModules()
+    {
+        $modulesModel = ModuleModel::where('status', 0)->get();
+        return $this->getListModules($modulesModel);
+    }
+
+    public function getListModules($modulesModel)
     {
         $modules = array();
-        $modulesModel = ModuleModel::all();
         foreach ($modulesModel as $module)
         {
             $modules[$module->name]['name'] = $this->def($module->name, 'name');
