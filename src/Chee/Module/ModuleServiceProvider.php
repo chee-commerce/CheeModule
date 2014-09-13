@@ -53,8 +53,14 @@ class ModuleServiceProvider extends ServiceProvider
 			return new Commands\CreateCommand($app);
 		});
 
+		$this->app['CheeModule.buildAssets'] = $this->app->share(function($app)
+		{
+			return new Commands\BuildAssetsCommand($app);
+		});
+
 		$this->commands(array(
-			'CheeModule.create'
+			'CheeModule.create',
+			'CheeModule.buildAssets'
 		));
 	}
 

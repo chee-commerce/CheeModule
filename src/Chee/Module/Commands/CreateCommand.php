@@ -25,6 +25,12 @@ class CreateCommand extends AbstractCommand
         $name = studly_case(substr($this->argument('name'), strpos($this->argument('name'), '=') + 1));
         $modulePath = $this->modulesPath.$name;
 
+        if (!empty($name))
+        {
+            $this->error('Please write module name');
+            exit;
+        }
+
         if (in_array($name, $this->getModulesDirectories()))
         {
             $this->error('Module '.$name.' created before [directory].');

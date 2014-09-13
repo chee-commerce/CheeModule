@@ -149,7 +149,9 @@ class CheeModule
                     return false; //Can not make directory
                 }
             }
+            return true;
         }
+        return false;
     }
 
     /**
