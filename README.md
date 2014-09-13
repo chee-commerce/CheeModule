@@ -1,9 +1,9 @@
 # Chee Module [in development]
 > a module manager for laravel 4
 
-##Install
+## Install
 
-###with composer git repository
+### with composer git repository
 
 update `composer.json` in laravel root with:
 
