@@ -19,7 +19,14 @@ update `composer.json` in laravel root with:
     }
 ],
 ```
-and run `composer update`. then add service provider and facades in `app/config/app.php`.
+and run `composer update`. then run:
+
+```terminal
+sudo php artisan migrate --path=vendor/chee/module/src/Chee/Module/Migrations/
+```
+
+
+then add service provider and facades in `app/config/app.php`.
 
 Service Provider:
 
