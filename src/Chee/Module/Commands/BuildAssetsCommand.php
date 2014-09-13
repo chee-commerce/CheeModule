@@ -34,7 +34,7 @@ class BuildAssetsCommand extends AbstractCommand
         $build = $this->app['chee-module']->buildAssets($name);
         if ($build)
         {
-            $this->info('moved assets '.$name.' module in '.public_path().'/'.$name.' successfully.');
+            $this->info('moved assets '.$name.' module in '.public_path().$this->app['config']->get('module::assets').'/'.$name.' successfully.');
         }
         else
         {
