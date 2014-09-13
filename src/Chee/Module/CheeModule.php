@@ -127,7 +127,7 @@ class CheeModule
         foreach ($modulesModel as $module)
         {
             $modules[$module->name]['name'] = $this->def($module->name, 'name');
-            $modules[$module->name]['icon'] = $this->def($module->name, 'icon');
+            $modules[$module->name]['icon'] = $this->config->get('module::assets').'/'.$module->name.'/'.$this->def($module->name, 'icon');
             $modules[$module->name]['description'] = $this->def($module->name, 'description');
             $modules[$module->name]['author'] = $this->def($module->name, 'author');
             $modules[$module->name]['website'] = $this->def($module->name, 'website');
