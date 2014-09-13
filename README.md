@@ -1,4 +1,4 @@
-#Chee Module [in development]
+# Chee Module [in development]
 > a module manager for laravel 4
 
 ##Install
