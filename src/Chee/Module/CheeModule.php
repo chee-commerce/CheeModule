@@ -19,6 +19,8 @@ class CheeModule
 
     protected $files;
 
+    protected $definition;
+
     public function __construct(Application $app, Repository $config, Filesystem $files)
     {
         $this->app = $app;
@@ -118,6 +120,22 @@ class CheeModule
         return false;
     }
 
+    public function getListModules()
+    {
+        $modules = array();
+        $modulesModel = ModuleModel::all();
+        foreach ($modulesModel as $module)
+        {
+            $modules[$module->name]['name'] = $this->def($module->name, 'name');
+            $modules[$module->name]['icon'] = $this->def($module->name, 'icon');
+            $modules[$module->name]['description'] = $this->def($module->name, 'description');
+            $modules[$module->name]['author'] = $this->def($module->name, 'author');
+            $modules[$module->name]['website'] = $this->def($module->name, 'website');
+            $modules[$module->name]['version'] = $this->def($module->name, 'version');
+        }
+        return $modules;
+    }
+
     public function buildAssets($name)
     {
         $module = $this->getModuleDirectory($name);
@@ -204,5 +222,17 @@ class CheeModule
             }
         }
         return false;
+    }
+
+    /**
+     * Get module.json data of module
+     * @param $key string|null key of array
+     * @return array|string
+     */
+    protected function def($moduleName, $key = null)
+    {
+        $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
+        if ($key) return isset($definition[$key]) ? $definition[$key] : null;
+        else return $definition;
     }
 }

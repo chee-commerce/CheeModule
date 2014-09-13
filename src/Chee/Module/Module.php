@@ -95,7 +95,7 @@ class Module extends ServiceProvider
      * @param $key string|null key of array
      * @return array|string
      */
-    protected function def($key = null)
+    public function def($key = null)
     {
         if ($key) return isset($this->definition[$key]) ? $this->definition[$key] : null;
         else return $this->definition;
