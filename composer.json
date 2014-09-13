@@ -1,0 +1,21 @@
+{
+    "name": "chee/module",
+    "description": "Module manager build for Chee Shop, but you can use on any laravel application",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "mohsen shafiei",
+            "email": "mohsen.sh12@hotmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "laravel/framework": "~4"
+    },
+    "autoload": {
+        "psr-0": {
+            "Chee\\Module": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}

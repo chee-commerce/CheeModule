@@ -1,0 +1,9 @@
+{
+    "name": "Test1",
+    "description": "a test for chee module manager",
+    "provider": [
+        "Modules\\Test1\\Test1ServiceProvider"
+    ],
+    "include": [
+    ]
+}

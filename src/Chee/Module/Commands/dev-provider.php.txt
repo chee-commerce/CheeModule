@@ -1,0 +1,11 @@
+<?php namespace Modules\Test1;
+
+use Illuminate\Support\ServiceProvider;
+
+class Test1ServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+
+    }
+}

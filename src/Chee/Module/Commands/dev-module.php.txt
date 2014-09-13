@@ -1,0 +1,41 @@
+<?php
+
+use Classes\Validate;
+
+class Test1 extends \Classes\Module\Module
+{
+
+    public function __construct()
+    {
+        $this->name = 'Test1';
+        $this->author = 'test author';
+    }
+
+    public function subscribe($events)
+    {
+        $events->listen('modules.install.' . $this->name, 'Test1@install');
+        $events->listen('modules.enable.' . $this->name, 'Test1@enable');
+        $events->listen('modules.disable.' . $this->name, 'Test1@disable');
+        $events->listen('modules.uninstall.' . $this->name, 'Test1@uninstall');
+    }
+
+    public function install($event)
+    {
+
+    }
+
+    public function uninstall($event)
+    {
+
+    }
+
+    public function disable($event)
+    {
+
+    }
+
+    public function enable($event)
+    {
+        
+    }
+}
