@@ -77,7 +77,7 @@ class CreateCommand extends AbstractCommand
         file_put_contents($moduleFile, str_replace('module-name', $name, file_get_contents($moduleFile)));
         file_put_contents($moduleProvider, str_replace('module-name', $name, file_get_contents($moduleProvider)));
 
-        $this->app['files']->copy(__DIR__.'/icon.png', $modulePath.'/assets');
+        $this->app['files']->copy(__DIR__.'/icon.png', $modulePath.'/assets/icon.png');
 
         $this->info('module '.$name.' generated successfully in '.$modulePath.'.');
 
