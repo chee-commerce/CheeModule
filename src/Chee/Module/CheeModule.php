@@ -308,12 +308,12 @@ class CheeModule
             if ($this->files->deleteDirectory($this->getAssetDirectory($name)))
             {
                 $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
-                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually.'.$this->getAssetDirectory($name));
+                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getAssetDirectory($name));
             }
             if ($this->files->deleteDirectory($this->getModuleDirectory($name)))
             {
                 $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
-                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually.'.$this->getModuleDirectory($name));
+                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getModuleDirectory($name));
             }
             return true;
         }
