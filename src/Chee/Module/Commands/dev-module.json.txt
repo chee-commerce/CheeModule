@@ -5,13 +5,13 @@
 
     "author": "your name",
 
-    "version": "0.0.1-dev"
+    "version": "0.0.1-dev",
 
     "email": "your email",
 
-    "website": "module site",
+    "website": "http://module-site.com",
 
-    "icon": "icon.png"
+    "icon": "icon.png",
 
     "provider": [
         "Modules\\module-name\\module-nameServiceProvider"
