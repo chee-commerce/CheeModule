@@ -85,11 +85,19 @@ class CheeModule
         {
             $module->register();
         }
-        $modules = ModuleModel::where('enable', 1)->get();
+        $modules = ModuleModel::where('is_enabled', 1)->orWhere('is_installed', 1)->get();
         foreach ($modules as $module)
         {
-            $this->app['events']->fire('modules.enable.'.$module->name, null);
-            $module->enable = 0;
+            if ($module->is_installed)
+            {
+                $this->app['events']->fire('modules.install.'.$module->name, null);
+                $module->is_installed = 0;
+            }
+            if ($module->is_enabled)
+            {
+                $this->app['events']->fire('modules.enable.'.$module->name, null);
+                $module->is_enabled = 0;
+            }
             $module->save();
         }
     }
@@ -107,7 +115,7 @@ class CheeModule
             if(!$module->status && $module->installed)
             {
                 $module->status = 1;
-                $module->enable = 1;
+                $module->is_enabled = 1;
                 $module->save();
                 return true;
             }
@@ -242,12 +250,16 @@ class CheeModule
         $module = $this->findOrFalse('name', $name);
         if ($module)
         {
-            $this->app['events']->fire('modules.install.'.$name, null);
-            $module->installed = 1;
-            $module->status = 0;
-            $module->save();
-            $this->buildAssets($name);
-            return true;
+            if (!$module->installed)
+            {
+                $module->installed = 1;
+                $module->status = 1;
+                $module->is_enabled = 1;
+                $module->is_installed = 1;
+                $module->save();
+                $this->buildAssets($name);
+                return true;
+            }
         }
         return false;
     }

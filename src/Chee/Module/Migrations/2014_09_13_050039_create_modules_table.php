@@ -18,7 +18,8 @@ class CreateModulesTable extends Migration {
 			$table->string('name', 150);
 			$table->boolean('installed');
 			$table->boolean('status');
-			$table->boolean('enable');
+			$table->boolean('is_enabled');
+			$table->boolean('is_installed');
 		});
 	}
 
