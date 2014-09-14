@@ -52,7 +52,7 @@ class CreateCommand extends AbstractCommand
         $this->info('Generating module '.$name);
         $this->info('Please wait...');
 
-        $this->app['files']->makeDirectory($modulePath, 0777);
+        $this->app['files']->makeDirectory($modulePath, 0775);
 
         $routes = '<?php'.PHP_EOL;
         $this->app['files']->put($modulePath.'/routes.php', $routes);
@@ -61,23 +61,22 @@ class CreateCommand extends AbstractCommand
         $this->app['files']->put($modulePath.'/'.$name.'.php', $this->app['files']->get(__DIR__.'/dev-module.php.txt'));
         $this->app['files']->put($modulePath.'/'.$name.'ServiceProvider.php', $this->app['files']->get(__DIR__.'/dev-provider.php.txt'));
 
-        $this->app['files']->makeDirectory($modulePath . '/assets', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/config', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/controllers', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/lang', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/models', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/migrations', 0777);
-		$this->app['files']->makeDirectory($modulePath . '/views', 0777);
+        $this->app['files']->makeDirectory($modulePath . '/assets', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/config', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/controllers', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/lang', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/models', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/migrations', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/views', 0775);
 
         $this->info('module '.$name.' generated successfully in '.$modulePath.'.');
 
         $model = new ModuleModel;
         $model->name = $name;
-        if ($this->confirm('Enable this module? [no|yes]', false))
-        {
-            $model->status = 1;
-        }
+        $model->status = 0;
+        $model->installed = 0;
         $model->save();
+        $this->error('This module has been disabled and uninstalled.');
         $this->error('Don\'t forget to correct class name and namespaces in every file have.');
     }
 
