@@ -5,6 +5,7 @@ class module-name extends \Classes\Module\Module
 
     public function __construct()
     {
+        $this->name = "module-name";
     }
 
     public function subscribe($events)
