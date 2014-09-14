@@ -4,23 +4,46 @@ use Illuminate\Foundation\Application;
 use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
 
+/**
+ * CheeModule for manage module
+ * @author Chee
+ */
 class CheeModule
 {
 
+    /**
+	 * IoC
+	 * @var Illuminate\Foundation\Application
+	 */
     protected $app;
 
+    /**
+     * Config
+     * @var Illuminate\Config\Repository
+     */
     protected $config;
 
+    /**
+     * Path of modules
+     * @var string
+     */
     protected $modulesPath;
 
+    /**
+     * Array of Module
+     * @var Illuminate\Config\Repository
+     */
     protected $modules = array();
 
-    protected $model;
-
+    /**
+     * Files
+     * @var Illuminate\Filesystem\Filesystem
+     */
     protected $files;
 
-    protected $definition;
-
+    /**
+     * Initialize class
+     */
     public function __construct(Application $app, Repository $config, Filesystem $files)
     {
         $this->app = $app;
@@ -31,14 +54,14 @@ class CheeModule
     }
 
     /**
-     * get all module from database and initialize
+     * Get all module from database and initialize
      */
     public function start()
     {
         $modules = ModuleModel::all();
         foreach($modules as $module)
         {
-            if ($module->status)
+            if ($module->installed && $module->status)
             {
                 $path = $this->getModuleDirectory($module->name);
                 if ($path)
@@ -81,7 +104,7 @@ class CheeModule
         $module = $this->findOrFalse('name', $name);
         if ($module)
         {
-            if(!$module->status)
+            if(!$module->status && $module->installed)
             {
                 $module->status = 1;
                 $module->enable = 1;
@@ -106,7 +129,7 @@ class CheeModule
         $module = $this->findOrFalse('name', $name);
         if ($module)
         {
-            if($module->status)
+            if($module->status && $module->installed)
             {
                 $module->status = 0;
                 $module->save();
@@ -120,24 +143,57 @@ class CheeModule
         return false;
     }
 
+    /**
+     * Reset configuration module
+     * @param name string
+     * @return boolean
+     */
+    public function reset($name)
+    {
+        $module = $this->findOrFalse('name', $name);
+        if ($module)
+        {
+            if($module->status && $module->installed)
+            {
+                $this->app['events']->fire('modules.reset.'.$name, null);
+                $module->status = 0;
+                $module->save();
+                $this->app['events']->fire('modules.disable.'.$name, null);
+                return true;
+            }
+            /* This module is disable or uninstalled and can not be reset*/
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * Get all list modules
+     * @return object
+     */
     public function getListAllModules()
     {
         $modulesModel = ModuleModel::all();
         return $this->getListModules($modulesModel);
     }
 
-    public function getListEnabledModules()
+    /**
+     * Get customize list modules
+     * @param $status boolean
+     * @param $installed boolean
+     * @return object
+     */
+    public function getListCustomModules($status = 1, $installed = 1)
     {
-        $modulesModel = ModuleModel::where('status', 1)->get();
+        $modulesModel = ModuleModel::where('status', $status)->where('installed', $installed)->get();
         return $this->getListModules($modulesModel);
     }
 
-    public function getListDisabledModules()
-    {
-        $modulesModel = ModuleModel::where('status', 0)->get();
-        return $this->getListModules($modulesModel);
-    }
-
+    /**
+     * Get list modules
+     * @param $modulesModel model
+     * @return array
+     */
     public function getListModules($modulesModel)
     {
         $modules = array();
@@ -153,6 +209,11 @@ class CheeModule
         return $modules;
     }
 
+    /**
+     * Move contents assets module to public directory
+     * @param $name string
+     * @return boolean
+     */
     public function buildAssets($name)
     {
         $module = $this->getModuleDirectory($name);
@@ -171,8 +232,13 @@ class CheeModule
         return false;
     }
 
+    public function install($name)
+    {
+
+    }
+
     /**
-     * Uninstall module
+     * Uninstall module and remove assets files but keep module files for install again
      * @param $name string
      * @return boolean
      */
@@ -181,11 +247,39 @@ class CheeModule
         $module = $this->findOrFalse('name', $name);
         if ($module)
         {
+            if ($module->installed)
+            {
+                if ($module->status)
+                {
+                    $this->app['events']->fire('modules.disable.'.$name, null);
+                    $module->status = 0;
+                }
+                $this->app['events']->fire('modules.uninstall.'.$name, null);
+                $module->installed = 0;
+                $module->save();
+                $this->files->deleteDirectory($this->getAssetDirectory($name));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Delete module and remove assets and module files
+     * @param $name string
+     * @return boolean
+     */
+    public function delete($name)
+    {
+        $module = $this->findOrFalse('name', $name);
+        if ($module)
+        {
+            $this->app['events']->fire('modules.disable.'.$name, null);
             $this->app['events']->fire('modules.uninstall.'.$name, null);
+            $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
-            $modulePath = $this->getModuleDirectory($name);
-            $this->files->deleteDirectory($modulePath);
             $this->files->deleteDirectory($this->getAssetDirectory($name));
+            $this->files->deleteDirectory($this->getModuleDirectory($name););
             return true;
         }
         return false;
@@ -219,6 +313,11 @@ class CheeModule
         }
     }
 
+    /**
+     * Get assets path of speciic module
+     * @param $name string name of module
+     * @return string
+     */
     public function getAssetDirectory($name)
     {
         return public_path().$this->config->get('module::assets').'/'.$name;
