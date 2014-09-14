@@ -279,7 +279,7 @@ class CheeModule
             $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
             $this->files->deleteDirectory($this->getAssetDirectory($name));
-            $this->files->deleteDirectory($this->getModuleDirectory($name););
+            $this->files->deleteDirectory($this->getModuleDirectory($name));
             return true;
         }
         return false;
