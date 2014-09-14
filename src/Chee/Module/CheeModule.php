@@ -232,9 +232,23 @@ class CheeModule
         return false;
     }
 
+    /**
+     * Install module and build assets
+     * @param $name string
+     * @return boolean
+     */
     public function install($name)
     {
-
+        $module = $this->findOrFalse('name', $name);
+        if ($module)
+        {
+            $this->app['events']->fire('modules.install.'.$name, null);
+            $module->installed = 1;
+            $module->status = 0;
+            $this->buildAssets($name);
+            return true;
+        }
+        return false;
     }
 
     /**

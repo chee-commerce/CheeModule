@@ -1,22 +1,20 @@
 <?php
 
-use Classes\Validate;
-
-class Test1 extends \Classes\Module\Module
+class module-name extends \Classes\Module\Module
 {
 
     public function __construct()
     {
-        $this->name = 'Test1';
-        $this->author = 'test author';
     }
 
     public function subscribe($events)
     {
-        $events->listen('modules.install.' . $this->name, 'Test1@install');
-        $events->listen('modules.enable.' . $this->name, 'Test1@enable');
-        $events->listen('modules.disable.' . $this->name, 'Test1@disable');
-        $events->listen('modules.uninstall.' . $this->name, 'Test1@uninstall');
+        $events->listen('modules.install.' . $this->name, 'module-name@install');
+        $events->listen('modules.uninstall.' . $this->name, 'module-name@uninstall');
+        $events->listen('modules.delete.' . $this->name, 'module-name@delete');
+        $events->listen('modules.enable.' . $this->name, 'module-name@enable');
+        $events->listen('modules.disable.' . $this->name, 'module-name@disable');
+        $events->listen('modules.reset.' . $this->name, 'module-name@reset');
     }
 
     public function install($event)
@@ -29,6 +27,11 @@ class Test1 extends \Classes\Module\Module
 
     }
 
+    public function delete($event)
+    {
+
+    }
+
     public function disable($event)
     {
 
@@ -36,6 +39,11 @@ class Test1 extends \Classes\Module\Module
 
     public function enable($event)
     {
-        
+
+    }
+
+    public function reset($event)
+    {
+
     }
 }

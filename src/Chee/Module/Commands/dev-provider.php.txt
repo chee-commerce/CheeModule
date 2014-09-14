@@ -1,8 +1,8 @@
-<?php namespace Modules\Test1;
+<?php namespace Modules\module-name;
 
 use Illuminate\Support\ServiceProvider;
 
-class Test1ServiceProvider extends ServiceProvider
+class module-nameServiceProvider extends ServiceProvider
 {
     public function register()
     {

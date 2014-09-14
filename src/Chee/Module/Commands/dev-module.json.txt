@@ -1,9 +1,22 @@
 {
-    "name": "Test1",
-    "description": "a test for chee module manager",
+    "name": "module-name",
+
+    "description": "your module description",
+
+    "author": "your name",
+
+    "version": "0.0.1-dev"
+
+    "email": "your email",
+
+    "website": "module site",
+
+    "icon": "icon.png"
+
     "provider": [
-        "Modules\\Test1\\Test1ServiceProvider"
+        "Modules\\module-name\\module-nameServiceProvider"
     ],
+
     "include": [
     ]
 }
