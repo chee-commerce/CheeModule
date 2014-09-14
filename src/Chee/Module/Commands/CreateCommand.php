@@ -54,13 +54,12 @@ class CreateCommand extends AbstractCommand
 
         $this->app['files']->makeDirectory($modulePath, 0775);
 
+        $moduleRoutes = $modulePath.'/routes.php';
         $moduleJSON = $modulePath.'/module.json';
         $moduleFile = $modulePath.'/'.$name.'.php';
         $moduleProvider = $modulePath.'/'.$name.'ServiceProvider.php';
 
-        $routes = '<?php'.PHP_EOL;
-        $this->app['files']->put($modulePath.'/routes.php', $routes);
-
+        $this->app['files']->put($moduleRoutes, $this->app['files']->get(__DIR__.'/dev-routes.php.txt'));
         $this->app['files']->put($moduleJSON, $this->app['files']->get(__DIR__.'/dev-module.json.txt'));
         $this->app['files']->put($moduleFile, $this->app['files']->get(__DIR__.'/dev-module.php.txt'));
         $this->app['files']->put($moduleProvider, $this->app['files']->get(__DIR__.'/dev-provider.php.txt'));
@@ -73,6 +72,7 @@ class CreateCommand extends AbstractCommand
 		$this->app['files']->makeDirectory($modulePath . '/migrations', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/views', 0775);
 
+        file_put_contents($moduleRoutes, str_replace('module-name', $name, file_get_contents($moduleRoutes)));
         file_put_contents($moduleJSON, str_replace('module-name', $name, file_get_contents($moduleJSON)));
         file_put_contents($moduleFile, str_replace('module-name', $name, file_get_contents($moduleFile)));
         file_put_contents($moduleProvider, str_replace('module-name', $name, file_get_contents($moduleProvider)));
