@@ -245,6 +245,7 @@ class CheeModule
             $this->app['events']->fire('modules.install.'.$name, null);
             $module->installed = 1;
             $module->status = 0;
+            $module->save();
             $this->buildAssets($name);
             return true;
         }
