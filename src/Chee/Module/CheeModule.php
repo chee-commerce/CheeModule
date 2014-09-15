@@ -252,6 +252,13 @@ class CheeModule
         {
             if (!$module->installed)
             {
+                //Check require version for Chee Commerce
+                $cheeCommerceRequire = $this->def($name, 'CheeCommerce');
+                if (!$this->CheeCommerceCompliancy($cheeCommerceRequire))
+                {
+                    return false;
+                }
+
                 $module->installed = 1;
                 $module->status = 1;
                 $module->is_enabled = 1;
@@ -263,6 +270,168 @@ class CheeModule
         }
         return false;
     }
+
+    /**
+     * Check Chee Commerce Compliancy
+     * @param $version string CheeCommerce version entered by module developer in module.json
+     * @param boolean
+     */
+    public function CheeCommerceCompliancy($version)
+    {
+        if (is_null($version))
+        {
+            $this->app['session']->put('cheeErrors.unknownVersion.title', 'Unknown version require for Chee Commerce');
+            return false;
+        }
+
+        //Split min version
+        $min = $version['min'];
+
+        $minMajorOffset = strpos($min, '.');
+        $minMajor = substr($min, 0, $minMajorOffset);
+
+        $minMinorOffset = strpos($min, '.', $minMajorOffset + 1);
+        $minMinor = substr($min, $minMajorOffset + 1, $minMinorOffset - $minMajorOffset - 1);
+
+        $minPathOffset = $minMinorOffset + 1;
+        $minPath = substr($min, $minMinorOffset + 1, strlen($min) - $minMinorOffset);
+
+        //Split max version
+        $max = $version['max'];
+
+        $maxMajorOffset = strpos($max, '.');
+        $maxMajor = substr($max, 0, $maxMajorOffset);
+
+        $maxMinorOffset = strpos($max, '.', $maxMajorOffset + 1);
+        $maxMinor = substr($max, $maxMajorOffset + 1, $maxMinorOffset - $maxMajorOffset - 1);
+
+        $maxPathOffset = $maxMinorOffset + 1;
+        $maxPath = substr($max, $maxMinorOffset + 1, strlen($max) - $maxMinorOffset);
+
+        //Check min version
+        if ($minMajor !== ANY)
+        {
+            if (CH_MAJOR_VERSION < (int) $minMajor)
+            {
+                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+            elseif (CH_MAJOR_VERSION === (int) $minMajor)
+            {
+                if (CH_MINOR_VERSION < (int) $minMinor)
+                {
+                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
+                    return false;
+                }
+                elseif (CH_MINOR_VERSION === (int) $minMinor)
+                {
+                    if (CH_PATH_VERSION < (int) $minPath)
+                    {
+                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
+                        return false;
+                    }
+                }
+            }
+        }
+
+        //Check max version
+        if ($maxMajor !== ANY)
+        {
+            if (CH_MAJOR_VERSION > (int) $maxMajor)
+            {
+                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+            elseif (CH_MAJOR_VERSION === (int) $maxMajor)
+            {
+                if ($maxMinor !== ANY && CH_MINOR_VERSION > (int) $maxMinor)
+                {
+                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
+                    return false;
+                }
+                elseif (CH_MINOR_VERSION === (int) $maxMinor)
+                {
+                    if ($maxPath !== ANY && CH_PATH_VERSION > (int) $maxPath)
+                    {
+                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+
+    /*public function CheeCommerceCompliancy($version)
+    {
+        if (is_null($version))
+        {
+            $this->app['session']->put('cheeErrors.unknownVersion.title', 'Unknown version require for Chee Commerce');
+            return false;
+        }
+
+        $sign = substr($version, 0, 2);
+        $greaterThan = false;
+
+        if ($sign === '>=')
+        {
+            $greaterThan = true;
+            $version = substr($version, 2);
+        }
+
+        $major_offset = strpos($version, '.');
+        $major = substr($version, 0, $major_offset);
+
+        $minor_offset = strpos($version, '.', $major_offset + 1);
+        $minor = substr($version, $major_offset + 1, $minor_offset - $major_offset - 1);
+
+        $path_offset = $minor_offset + 1;
+        $path = substr($version, $minor_offset + 1, strlen($version) - $minor_offset);
+
+        if ($greaterThan)
+        {
+            if (CH_MAJOR_VERSION === $major)
+            {
+                if (CH_MINOR_VERSION === $minor)
+                {
+                    if (!CH_PATH_VERSION >= $path)
+                    {
+                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
+                        return false;
+                    }
+                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
+                    return false;
+                }
+                elseif (CH_MINOR_VERSION < $minor)
+                {
+
+                }
+                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+            elseif (CH_MAJOR_VERSION )
+
+
+        }
+        else
+        {
+            if ($major !== ANY && CH_MAJOR_VERSION !== (int)$major)
+            {
+                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+            if ($minor !== ANY && CH_MINOR_VERSION !== (int)$minor)
+            {
+                $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+            if ($path !== ANY && CH_PATH_VERSION !== (int)$path)
+            {
+                $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
+                return false;
+            }
+        }
+    }*/
 
     /**
      * Uninstall module and remove assets files but keep module files for install again
@@ -305,12 +474,12 @@ class CheeModule
             $this->app['events']->fire('modules.uninstall.'.$name, null);
             $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
-            if ($this->files->deleteDirectory($this->getAssetDirectory($name)))
+            if (!$this->files->deleteDirectory($this->getAssetDirectory($name)))
             {
                 $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
                 $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getAssetDirectory($name));
             }
-            if ($this->files->deleteDirectory($this->getModuleDirectory($name)))
+            if (!$this->files->deleteDirectory($this->getModuleDirectory($name)))
             {
                 $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
                 $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getModuleDirectory($name));
@@ -380,12 +549,21 @@ class CheeModule
     /**
      * Get module.json data of module
      * @param $key string|null key of array
+     * @param $keyInKey string if first key is array second key can given
      * @return array|string
      */
-    protected function def($moduleName, $key = null)
+    protected function def($moduleName, $key = null, $keyInKey = null)
     {
         $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
-        if ($key) return isset($definition[$key]) ? $definition[$key] : null;
-        else return $definition;
+        if ($key)
+            if (isset($definition[$key]))
+                if (is_null($keyInKey))
+                    return $definition[$key];
+                else
+                    return isset($definition[$key][$keyInKey]) ? $definition[$key][$keyInKey] : null;
+            else
+                return null;
+        else
+            return $definition;
     }
 }
