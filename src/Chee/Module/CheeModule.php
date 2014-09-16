@@ -12,6 +12,12 @@ class CheeModule
 {
 
     /**
+     * use CheeModule for?
+     * @var string
+     */
+    protected $systemName;
+
+    /**
 	 * IoC
 	 * @var Illuminate\Foundation\Application
 	 */
@@ -42,6 +48,12 @@ class CheeModule
     protected $files;
 
     /**
+     * Keep errors
+     * @var array
+     */
+    protected $errors = array();
+
+    /**
      * Initialize class
      */
     public function __construct(Application $app, Repository $config, Filesystem $files)
@@ -50,6 +62,7 @@ class CheeModule
         $this->config = $config;
         $this->files = $files;
 
+        $this->systemName = 'CheeCommerce';
         $this->modulesPath = $this->config->get('module::modules_path');
     }
 
@@ -252,9 +265,14 @@ class CheeModule
         {
             if (!$module->installed)
             {
-                //Check require version for Chee Commerce
-                $cheeCommerceRequire = $this->def($name, 'CheeCommerce');
-                if (!$this->CheeCommerceCompliancy($cheeCommerceRequire))
+                //Check require version for Chee Commerce and module dependecies
+                $cheeCommerceRequire = $this->def($name, $this->systemName);
+                $moduleDependency = $this->def($name, 'require');
+
+                $cheeCommerceRequire = $this->CheeCommerceCompliancy($cheeCommerceRequire);
+                $moduleDependency = $this->checkDependency($moduleDependency);
+
+                if (!$cheeCommerceRequire || !$moduleDependency)
                 {
                     return false;
                 }
@@ -274,15 +292,11 @@ class CheeModule
     /**
      * Check Chee Commerce Compliancy
      * @param $version string CheeCommerce version entered by module developer in module.json
-     * @param boolean
+     * @param bool
      */
     public function CheeCommerceCompliancy($version)
     {
-        if (is_null($version))
-        {
-            $this->app['session']->put('cheeErrors.unknownVersion.title', 'Unknown version require for Chee Commerce');
-            return false;
-        }
+        $error = "";
 
         //Split min version
         $min = $version['min'];
@@ -313,22 +327,19 @@ class CheeModule
         {
             if (CH_MAJOR_VERSION < (int) $minMajor)
             {
-                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
-                return false;
+                $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
             }
             elseif (CH_MAJOR_VERSION === (int) $minMajor)
             {
                 if (CH_MINOR_VERSION < (int) $minMinor)
                 {
-                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
-                    return false;
+                    $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                 }
                 elseif (CH_MINOR_VERSION === (int) $minMinor)
                 {
                     if (CH_PATH_VERSION < (int) $minPath)
                     {
-                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
-                        return false;
+                        $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                     }
                 }
             }
@@ -339,99 +350,141 @@ class CheeModule
         {
             if (CH_MAJOR_VERSION > (int) $maxMajor)
             {
-                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
-                return false;
+                $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
             }
             elseif (CH_MAJOR_VERSION === (int) $maxMajor)
             {
                 if ($maxMinor !== ANY && CH_MINOR_VERSION > (int) $maxMinor)
                 {
-                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
-                    return false;
+                    $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                 }
                 elseif (CH_MINOR_VERSION === (int) $maxMinor)
                 {
                     if ($maxPath !== ANY && CH_PATH_VERSION > (int) $maxPath)
                     {
-                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
-                        return false;
+                        $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                     }
                 }
             }
         }
-    }
 
-
-    /*public function CheeCommerceCompliancy($version)
-    {
-        if (is_null($version))
+        if (strlen($error))
         {
-            $this->app['session']->put('cheeErrors.unknownVersion.title', 'Unknown version require for Chee Commerce');
+            $this->setDependencyCheeError($error);
             return false;
         }
+        return true;
+    }
 
-        $sign = substr($version, 0, 2);
-        $greaterThan = false;
-
-        if ($sign === '>=')
+    /**
+     * Check module dependency
+     * @param dependencies array
+     * @return bool
+     */
+    public function checkDependency($dependencies)
+    {
+        $errors = array(
+            'up/downgrade' => array(),
+            'notinstalled' => array()
+        );
+        foreach ($dependencies as $module => $version)
         {
-            $greaterThan = true;
-            $version = substr($version, 2);
-        }
-
-        $major_offset = strpos($version, '.');
-        $major = substr($version, 0, $major_offset);
-
-        $minor_offset = strpos($version, '.', $major_offset + 1);
-        $minor = substr($version, $major_offset + 1, $minor_offset - $major_offset - 1);
-
-        $path_offset = $minor_offset + 1;
-        $path = substr($version, $minor_offset + 1, strlen($version) - $minor_offset);
-
-        if ($greaterThan)
-        {
-            if (CH_MAJOR_VERSION === $major)
+            $deModule = ModuleModel::where('name', $module)->first();
+            if ($deModule)
             {
-                if (CH_MINOR_VERSION === $minor)
+                $majorOffset = strpos($deModule->version, '.');
+                $major = substr($deModule->version, 0, $majorOffset);
+
+                $minorOffset = strpos($deModule->version, '.', $majorOffset + 1);
+                $minor = substr($deModule->version, $majorOffset + 1, $minorOffset - $majorOffset - 1);
+
+                $path = substr($deModule->version, $minorOffset + 1, strlen($deModule->version) - $minorOffset);
+
+                $deMajorOffset = strpos($version, '.');
+                $deMajor = substr($version, 0, $deMajorOffset);
+
+                $deMinorOffset = strpos($version, '.', $deMajorOffset + 1);
+                $deMinor = substr($version, $deMajorOffset + 1, $deMinorOffset - $deMajorOffset - 1);
+
+                $dePath = substr($version, $deMinorOffset + 1, strlen($version) - $deMinorOffset);
+
+                //Check dependency version
+                if ($deMajor !== ANY)
                 {
-                    if (!CH_PATH_VERSION >= $path)
+                    if ((int) $major !== (int) $deMajor)
                     {
-                        $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
-                        return false;
+                        $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
                     }
-                    $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
-                    return false;
+                    elseif ((int) $major === (int) $deMajor)
+                    {
+                        if ($deMinor !== ANY && (int) $minor !== (int) $deMinor)
+                        {
+                            $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
+                        }
+                        elseif ((int) $minor === (int) $deMinor)
+                        {
+                            if ($dePath !== ANY && (int) $path !== (int) $dePath)
+                            {
+                                $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
+                            }
+                        }
+                    }
                 }
-                elseif (CH_MINOR_VERSION < $minor)
-                {
-
-                }
-                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
-                return false;
             }
-            elseif (CH_MAJOR_VERSION )
-
-
+            else
+            {
+                $errors['notinstalled'] = $this->arrayPush($errors['notinstalled'], $module.'#'.$version, $module.' v'.$version.' but not installed');
+            }
         }
-        else
+        if(count($errors))
         {
-            if ($major !== ANY && CH_MAJOR_VERSION !== (int)$major)
-            {
-                $this->app['session']->put('cheeErrors.incompatibilityVersionMagor.title', 'This module not made for current release of Chee Commerce');
-                return false;
-            }
-            if ($minor !== ANY && CH_MINOR_VERSION !== (int)$minor)
-            {
-                $this->app['session']->put('cheeErrors.incompatibilityVersionMinor.title', 'This module not made for current release of Chee Commerce');
-                return false;
-            }
-            if ($path !== ANY && CH_PATH_VERSION !== (int)$path)
-            {
-                $this->app['session']->put('cheeErrors.incompatibilityVersionPath.title', 'This module not made for current release of Chee Commerce');
-                return false;
-            }
+            $this->setDependencyModuleErrors($errors);
+            return false;
         }
-    }*/
+        return true;
+    }
+
+    /**
+     * Add dependency module for install a module
+     * @param $modules array
+     */
+    protected function setDependencyModuleErrors($modules)
+    {
+        $this->errors['dependecies']['modules'] = array();
+        array_push($this->errors['dependecies']['modules'], $modules);
+    }
+
+    /**
+     * Add cependecy Chee Commerce for install module
+     * @param $message string
+     * @return void
+     */
+    protected function setDependencyCheeError($message)
+    {
+        $this->errors['dependecies']['CheeCommerce'] = $message;
+    }
+
+    /**
+     * Send errors
+     * @return array
+     */
+    public function getErrors()
+    {
+        return $this->errors;
+    }
+
+    /**
+     * add record to array with index
+     * @param $dest array
+     * @param $key string
+     * @param $value
+     * @return array
+     */
+    protected function arrayPush($dest, $key, $value)
+    {
+        $dest[$key] = $value;
+        return $dest;
+    }
 
     /**
      * Uninstall module and remove assets files but keep module files for install again

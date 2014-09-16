@@ -5,7 +5,7 @@
 
     "author": "your name",
 
-    "version": "0.0.1-dev",
+    "version": "0.0.1",
 
     "email": "your email",
 
