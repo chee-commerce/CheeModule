@@ -276,7 +276,7 @@ class CheeModule
                 {
                     return false;
                 }
-
+                return false;
                 $module->installed = 1;
                 $module->status = 1;
                 $module->is_enabled = 1;
@@ -296,10 +296,21 @@ class CheeModule
      */
     public function CheeCommerceCompliancy($version)
     {
-        $error = "";
+        $error = array();
 
-        //Split min version
-        $min = $version['min'];
+        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version['min'], $min);
+        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version['max'], $max);
+
+        if (!count($min) || !count($max))
+        {
+            $error['module.json'] = "module.json of this module is corrupted.";
+            $this->setDependencyCheeError($error);
+            return false;
+        }
+
+        $min = $min[0];
+        $max = $max[0];
+
 
         $minMajorOffset = strpos($min, '.');
         $minMajor = substr($min, 0, $minMajorOffset);
@@ -309,9 +320,6 @@ class CheeModule
 
         $minPathOffset = $minMinorOffset + 1;
         $minPath = substr($min, $minMinorOffset + 1, strlen($min) - $minMinorOffset);
-
-        //Split max version
-        $max = $version['max'];
 
         $maxMajorOffset = strpos($max, '.');
         $maxMajor = substr($max, 0, $maxMajorOffset);
@@ -327,19 +335,19 @@ class CheeModule
         {
             if (CH_MAJOR_VERSION < (int) $minMajor)
             {
-                $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
             }
             elseif (CH_MAJOR_VERSION === (int) $minMajor)
             {
                 if (CH_MINOR_VERSION < (int) $minMinor)
                 {
-                    $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                    $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                 }
                 elseif (CH_MINOR_VERSION === (int) $minMinor)
                 {
                     if (CH_PATH_VERSION < (int) $minPath)
                     {
-                        $error = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                        $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                     }
                 }
             }
@@ -350,25 +358,25 @@ class CheeModule
         {
             if (CH_MAJOR_VERSION > (int) $maxMajor)
             {
-                $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
             }
             elseif (CH_MAJOR_VERSION === (int) $maxMajor)
             {
                 if ($maxMinor !== ANY && CH_MINOR_VERSION > (int) $maxMinor)
                 {
-                    $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                    $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                 }
                 elseif (CH_MINOR_VERSION === (int) $maxMinor)
                 {
                     if ($maxPath !== ANY && CH_PATH_VERSION > (int) $maxPath)
                     {
-                        $error = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                        $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
                     }
                 }
             }
         }
 
-        if (strlen($error))
+        if (count($error))
         {
             $this->setDependencyCheeError($error);
             return false;
@@ -383,10 +391,10 @@ class CheeModule
      */
     public function checkDependency($dependencies)
     {
-        $errors = array(
-            'up/downgrade' => array(),
-            'notinstalled' => array()
-        );
+        $errors = array();
+
+        if(is_null($dependencies)) $dependencies = array();
+
         foreach ($dependencies as $module => $version)
         {
             $deModule = ModuleModel::where('name', $module)->first();
@@ -413,19 +421,19 @@ class CheeModule
                 {
                     if ((int) $major !== (int) $deMajor)
                     {
-                        $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
+                        $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
                     }
                     elseif ((int) $major === (int) $deMajor)
                     {
                         if ($deMinor !== ANY && (int) $minor !== (int) $deMinor)
                         {
-                            $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
+                            $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
                         }
                         elseif ((int) $minor === (int) $deMinor)
                         {
                             if ($dePath !== ANY && (int) $path !== (int) $dePath)
                             {
-                                $errors['up/downgrade'] = $this->arrayPush($errors['up/downgrade'], $module.'#'.$version, $module.' v'.$version.' but v'.$deModule->version.' installed');
+                                $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
                             }
                         }
                     }
@@ -433,7 +441,7 @@ class CheeModule
             }
             else
             {
-                $errors['notinstalled'] = $this->arrayPush($errors['notinstalled'], $module.'#'.$version, $module.' v'.$version.' but not installed');
+                $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
             }
         }
         if(count($errors))
@@ -471,19 +479,6 @@ class CheeModule
     public function getErrors()
     {
         return $this->errors;
-    }
-
-    /**
-     * add record to array with index
-     * @param $dest array
-     * @param $key string
-     * @param $value
-     * @return array
-     */
-    protected function arrayPush($dest, $key, $value)
-    {
-        $dest[$key] = $value;
-        return $dest;
     }
 
     /**
