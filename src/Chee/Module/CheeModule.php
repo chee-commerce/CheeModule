@@ -12,12 +12,6 @@ class CheeModule
 {
 
     /**
-     * use CheeModule for?
-     * @var string
-     */
-    protected $systemName;
-
-    /**
 	 * IoC
 	 * @var Illuminate\Foundation\Application
 	 */
@@ -54,6 +48,36 @@ class CheeModule
     protected $errors = array();
 
     /**
+     * use CheeModule for?
+     * @var string
+     */
+    protected $systemName = 'CheeCommerce';
+
+    /**
+     * Version of system like 4.5.2
+     * @var string
+     */
+    protected $sysVersion = CH_VERSION;
+
+    /**
+     * Major version of system like 4
+     * @var int
+     */
+    protected $sysMajorVersion = CH_MAJOR_VERSION;
+
+    /**
+     * Major version of system like 5
+     * @var int
+     */
+    protected $sysMinorVersion = CH_MINOR_VERSION;
+
+    /**
+     * Major version of system like 2
+     * @var int
+     */
+    protected $sysPathVersion = CH_PATH_VERSION;
+
+    /**
      * Initialize class
      */
     public function __construct(Application $app, Repository $config, Filesystem $files)
@@ -62,7 +86,6 @@ class CheeModule
         $this->config = $config;
         $this->files = $files;
 
-        $this->systemName = 'CheeCommerce';
         $this->modulesPath = $this->config->get('module::modules_path');
     }
 
@@ -333,21 +356,21 @@ class CheeModule
         //Check min version
         if ($minMajor !== ANY)
         {
-            if (CH_MAJOR_VERSION < (int) $minMajor)
+            if ($this->sysMajorVersion < (int) $minMajor)
             {
-                $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
             }
-            elseif (CH_MAJOR_VERSION === (int) $minMajor)
+            elseif ($this->sysMajorVersion === (int) $minMajor)
             {
-                if (CH_MINOR_VERSION < (int) $minMinor)
+                if ($this->sysMinorVersion < (int) $minMinor)
                 {
-                    $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                    $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
                 }
-                elseif (CH_MINOR_VERSION === (int) $minMinor)
+                elseif ($this->sysMinorVersion === (int) $minMinor)
                 {
-                    if (CH_PATH_VERSION < (int) $minPath)
+                    if ($this->sysPathVersion < (int) $minPath)
                     {
-                        $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                        $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
                     }
                 }
             }
@@ -356,21 +379,21 @@ class CheeModule
         //Check max version
         if ($maxMajor !== ANY)
         {
-            if (CH_MAJOR_VERSION > (int) $maxMajor)
+            if ($this->sysMajorVersion > (int) $maxMajor)
             {
-                $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
             }
-            elseif (CH_MAJOR_VERSION === (int) $maxMajor)
+            elseif ($this->sysMajorVersion === (int) $maxMajor)
             {
-                if ($maxMinor !== ANY && CH_MINOR_VERSION > (int) $maxMinor)
+                if ($maxMinor !== ANY && $this->sysMinorVersion > (int) $maxMinor)
                 {
-                    $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                    $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
                 }
-                elseif (CH_MINOR_VERSION === (int) $maxMinor)
+                elseif ($this->sysMinorVersion === (int) $maxMinor)
                 {
-                    if ($maxPath !== ANY && CH_PATH_VERSION > (int) $maxPath)
+                    if ($maxPath !== ANY && $this->sysPathVersion > (int) $maxPath)
                     {
-                        $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'._CH_VERSION_.' is installed';
+                        $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
                     }
                 }
             }
@@ -479,6 +502,7 @@ class CheeModule
     public function getErrors()
     {
         return $this->errors;
+        $this->errors = array();
     }
 
     /**
