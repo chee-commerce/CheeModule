@@ -481,8 +481,7 @@ class CheeModule
      */
     protected function setDependencyModuleErrors($modules)
     {
-        $this->errors['dependecies']['modules'] = array();
-        array_push($this->errors['dependecies']['modules'], $modules);
+        $this->errors['dependecies']['modules'] = $modules;
     }
 
     /**
@@ -492,7 +491,7 @@ class CheeModule
      */
     protected function setDependencyCheeError($message)
     {
-        $this->errors['dependecies']['CheeCommerce'] = $message;
+        $this->errors['dependecies'][$this->systemName] = $message;
     }
 
     /**
