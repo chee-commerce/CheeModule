@@ -442,7 +442,7 @@ class CheeModule
 
         if (count($error))
         {
-            $this->setDependencyCheeError($error);
+            $this->errors['dependecies'][$this->systemName] = $message;
             return false;
         }
         return true;
@@ -510,7 +510,7 @@ class CheeModule
         }
         if(count($errors))
         {
-            $this->setDependencyModuleErrors($errors);
+            $this->errors['dependecies']['modules'] = $errors;
             return false;
         }
         return true;
@@ -538,29 +538,10 @@ class CheeModule
 
         if(count($errors))
         {
-            $this->setDependencyModuleErrors($errors);
+            $this->errors['dependecies']['modules'] = $errors;
             return false;
         }
         return true;
-    }
-
-    /**
-     * Add dependency module for install a module
-     * @param $modules array
-     */
-    protected function setDependencyModuleErrors($modules)
-    {
-        $this->errors['dependecies']['modules'] = $modules;
-    }
-
-    /**
-     * Add cependecy Chee Commerce for install module
-     * @param $message string
-     * @return void
-     */
-    protected function setDependencyCheeError($message)
-    {
-        $this->errors['dependecies'][$this->systemName] = $message;
     }
 
     /**
@@ -616,13 +597,11 @@ class CheeModule
             $module->delete();
             if (!$this->files->deleteDirectory($this->getAssetDirectory($name)))
             {
-                $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
-                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getAssetDirectory($name));
+                $this->error['delete']['forbidden'] = $this->getAssetDirectory($name);
             }
             if (!$this->files->deleteDirectory($this->getModuleDirectory($name)))
             {
-                $this->app['session']->put('cheeErrors.forbidden.title', 'Access Denied');
-                $this->app['session']->put('cheeErrors.forbidden.message', 'We don\'t permission to delete module from server. you can deleted manually. '.$this->getModuleDirectory($name));
+                $this->error['delete']['forbidden'] = $this->getModuleDirectory($name);
             }
             return true;
         }
