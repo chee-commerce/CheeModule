@@ -300,7 +300,7 @@ class CheeModule
                     return false;
                 }
 
-                if (!$this->installProccess($moudle))
+                if (!$this->installProccess($module))
                 {
                     return false;
                 }
@@ -331,7 +331,7 @@ class CheeModule
                     return false;
                 }
 
-                if (!$this->installProccess($moudle))
+                if (!$this->installProccess($module))
                 {
                     return false;
                 }
@@ -349,7 +349,7 @@ class CheeModule
         $module->is_enabled = 1;
         $module->is_installed = 1;
         $module->save();
-        $this->buildAssets($name);
+        $this->buildAssets($module->name);
         return true;
     }
 
