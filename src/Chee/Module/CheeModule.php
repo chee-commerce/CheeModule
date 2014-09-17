@@ -299,13 +299,11 @@ class CheeModule
                 {
                     return false;
                 }
-                return false;
-                $module->installed = 1;
-                $module->status = 1;
-                $module->is_enabled = 1;
-                $module->is_installed = 1;
-                $module->save();
-                $this->buildAssets($name);
+
+                if (!$this->installProccess($moudle))
+                {
+                    return false;
+                }
                 return true;
             }
         }
@@ -332,17 +330,27 @@ class CheeModule
                 {
                     return false;
                 }
-                return false;
-                $module->installed = 1;
-                $module->status = 1;
-                $module->is_enabled = 1;
-                $module->is_installed = 1;
-                $module->save();
-                $this->buildAssets($name);
+
+                if (!$this->installProccess($moudle))
+                {
+                    return false;
+                }
                 return true;
+
             }
         }
         return false;
+    }
+
+    protected function installProccess($module)
+    {
+        $module->installed = 1;
+        $module->status = 1;
+        $module->is_enabled = 1;
+        $module->is_installed = 1;
+        $module->save();
+        $this->buildAssets($name);
+        return true;
     }
 
     /**
