@@ -595,17 +595,19 @@ class CheeModule
             $this->app['events']->fire('modules.uninstall.'.$name, null);
             $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
+
+            $this->files->deleteDirectory($this->getAssetDirectory($name));
             if ($this->files->exists($this->getAssetDirectory($name)))
             {
-                if (!$this->files->deleteDirectory($this->getAssetDirectory($name)))
-                {
-                    $this->errors['delete']['forbidden']['assest'] = $this->getAssetDirectory($name);
-                }
+                $this->errors['delete']['forbidden']['assest'] = $this->getAssetDirectory($name);
             }
-            if (!$this->files->deleteDirectory($this->getModuleDirectory($name)))
+
+            $this->files->deleteDirectory($this->getModuleDirectory($name));
+            if($this->files->exists($this->getModuleDirectory($name)))
             {
                 $this->errors['delete']['forbidden']['module'] = $this->getModuleDirectory($name);
             }
+
             return true;
         }
         return false;
