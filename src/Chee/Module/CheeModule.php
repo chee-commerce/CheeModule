@@ -597,11 +597,11 @@ class CheeModule
             $module->delete();
             if (!$this->files->deleteDirectory($this->getAssetDirectory($name)))
             {
-                $this->error['delete']['forbidden'] = $this->getAssetDirectory($name);
+                $this->errors['delete']['forbidden'] = $this->getAssetDirectory($name);
             }
             if (!$this->files->deleteDirectory($this->getModuleDirectory($name)))
             {
-                $this->error['delete']['forbidden'] = $this->getModuleDirectory($name);
+                $this->errors['delete']['forbidden'] = $this->getModuleDirectory($name);
             }
             return true;
         }
