@@ -595,7 +595,7 @@ class CheeModule
             $this->app['events']->fire('modules.uninstall.'.$name, null);
             $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
-            if ($this->exists($this->getAssetDirectory($name)))
+            if ($this->files->exists($this->getAssetDirectory($name)))
             {
                 if (!$this->files->deleteDirectory($this->getAssetDirectory($name)))
                 {
