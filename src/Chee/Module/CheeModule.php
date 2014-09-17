@@ -279,7 +279,7 @@ class CheeModule
     /**
      * Install module and build assets
      * @param $name string
-     * @return boolean
+     * @return bool
      */
     public function install($name)
     {
@@ -288,14 +288,47 @@ class CheeModule
         {
             if (!$module->installed)
             {
-                //Check require version for Chee Commerce and module dependecies
+                //Check require version for system and module dependecies
                 $cheeCommerceRequire = $this->def($name, $this->systemName);
                 $moduleDependency = $this->def($name, 'require');
 
                 $cheeCommerceRequire = $this->CheeCommerceCompliancy($cheeCommerceRequire);
-                $moduleDependency = $this->checkDependency($moduleDependency);
+                $moduleDependency = $this->checkStrictDependency($moduleDependency);
 
                 if (!$cheeCommerceRequire || !$moduleDependency)
+                {
+                    return false;
+                }
+                return false;
+                $module->installed = 1;
+                $module->status = 1;
+                $module->is_enabled = 1;
+                $module->is_installed = 1;
+                $module->save();
+                $this->buildAssets($name);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Force install a module without check version of dependencies and version of system
+     * @param $name string
+     * @return bool
+     */
+    public function forceInstall($name)
+    {
+        $module = $this->findOrFalse('name', $name);
+        if ($module)
+        {
+            if (!$module->installed)
+            {
+                //Check module dependecies is installed
+                $moduleDependency = $this->def($name, 'require');
+                $moduleDependency = $this->checkDependency($moduleDependency);
+
+                if (!$moduleDependency)
                 {
                     return false;
                 }
@@ -408,11 +441,11 @@ class CheeModule
     }
 
     /**
-     * Check module dependency
+     * Check module dependency and this versions
      * @param dependencies array
      * @return bool
      */
-    public function checkDependency($dependencies)
+    public function checkStrictDependency($dependencies)
     {
         $errors = array();
 
@@ -467,6 +500,34 @@ class CheeModule
                 $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
             }
         }
+        if(count($errors))
+        {
+            $this->setDependencyModuleErrors($errors);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check module dependency
+     * @param dependencies array
+     * @return bool
+     */
+    protected function checkDependency($dependencies)
+    {
+        $errors = array();
+
+        if (is_null($dependencies)) $dependencies = array();
+
+        foreach ($dependencies as $module => $version)
+        {
+            $deModule = ModuleModel::where('name', $module)->first();
+            if (!$deModule)
+            {
+                $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
+            }
+        }
+
         if(count($errors))
         {
             $this->setDependencyModuleErrors($errors);
