@@ -18,5 +18,13 @@
     ],
 
     "include": [
-    ]
+    ],
+
+    "CheeCommerce": {
+        "min": "0.0.0",
+        "max": "1.0.0"
+    },
+
+    "require": {
+    }
 }
