@@ -575,10 +575,19 @@ class CheeModule
                 $module->installed = 0;
                 $module->save();
                 $this->files->deleteDirectory($this->getAssetDirectory($name));
+                if ($this->files->exists($this->getAssetDirectory($name)))
+                {
+                    $this->errors['uninstall']['forbidden']['assest'] = $this->getAssetDirectory($name);
+                }
                 return true;
             }
         }
         return false;
+    }
+
+    public function moduleInit($archive)
+    {
+        
     }
 
     /**
