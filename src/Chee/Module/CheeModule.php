@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
+use Chee\Module\Lib\PclZip;
 
 /**
  * CheeModule for manage module
@@ -587,7 +588,91 @@ class CheeModule
 
     public function moduleInit($archive)
     {
-        
+        $archive = new PclZip($archive);
+        //dd($archive);
+        if ($archive->extract(PCLZIP_OPT_PATH, '/tmp/') == 0) {
+            die("Unzip failed. Error : ".$archive->errorInfo(true));
+        }
+        //echo "Successfully extracted files to ".$destination_dir;
+        //$this->_unzip_file_pclzip($archive, __DIR__);
+    }
+
+    function _unzip_file_pclzip($file, $to, $needed_dirs = array()) {
+
+    	$archive = new PclZip('/var/www/magna-test/test2/laravel/app/Modules/myZip.zip');
+
+    	$archive_files = $archive->extract(PCLZIP_OPT_EXTRACT_AS_STRING);
+        dd($archive_files);
+
+    	// Is the archive valid?
+    	if (!is_array($archive_files)) dd('incompatible_archive');
+
+    	if (0 == count($archive_files)) dd('empty_archive_pclzip');
+
+    	$uncompressed_size = 0;
+
+    	// Determine any children directories needed (From within the archive)
+    	foreach ($archive_files as $file) {
+    		if ( '__MACOSX/' === substr($file['filename'], 0, 9) ) // Skip the OS X-created __MACOSX directory
+    			continue;
+
+    		$uncompressed_size += $file['size'];
+
+    		$needed_dirs[] = $to . $this->unTrailingSlashit($file['folder'] ? $file['filename'] : dirname($file['filename']) );
+    	}
+
+    	/*
+    	 * disk_free_space() could return false. Assume that any falsey value is an error.
+    	 * A disk that has zero free bytes has bigger problems.
+    	 * Require we have enough space to unzip the file and copy its contents, with a 10% buffer.
+    	 */
+    	/*if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+    		$available_space = @disk_free_space( WP_CONTENT_DIR );
+    		if ( $available_space && ( $uncompressed_size * 2.1 ) > $available_space )
+    			return new WP_Error( 'disk_full_unzip_file', __( 'Could not copy files. You may have run out of disk space.' ), compact( 'uncompressed_size', 'available_space' ) );
+    	}*/
+
+    	/*$needed_dirs = array_unique($needed_dirs);
+    	foreach ( $needed_dirs as $dir ) {
+    		// Check the parent folders of the folders all exist within the creation array.
+    		if ( untrailingslashit($to) == $dir ) // Skip over the working directory, We know this exists (or will exist)
+    			continue;
+    		if ( strpos($dir, $to) === false ) // If the directory is not within the working directory, Skip it
+    			continue;
+
+    		$parent_folder = dirname($dir);
+    		while ( !empty($parent_folder) && untrailingslashit($to) != $parent_folder && !in_array($parent_folder, $needed_dirs) ) {
+    			$needed_dirs[] = $parent_folder;
+    			$parent_folder = dirname($parent_folder);
+    		}
+    	}
+    	asort($needed_dirs);*/
+
+    	// Create those directories if need be:
+    	/*foreach ( $needed_dirs as $_dir ) {
+    		// Only check to see if the dir exists upon creation failure. Less I/O this way.
+    		if ( ! $wp_filesystem->mkdir( $_dir, FS_CHMOD_DIR ) && ! $wp_filesystem->is_dir( $_dir ) )
+    			return new WP_Error( 'mkdir_failed_pclzip', __( 'Could not create directory.' ), substr( $_dir, strlen( $to ) ) );
+    	}
+    	unset($needed_dirs);*/
+
+    	// Extract the files from the zip
+    	foreach ( $archive_files as $file ) {
+    		if ($file['folder'])
+    			continue;
+
+    		if ( '__MACOSX/' === substr($file['filename'], 0, 9) ) // Don't extract the OS X-created __MACOSX directory files
+    			continue;
+
+    		if (!$this->files->put( $to . $file['filename'], $file['content']))
+    			dd('copy_failed_pclzip');
+    	}
+    	return true;
+    }
+
+    protected function unTrailingSlashit($string)
+    {
+        return rtrim( $string, '/\\' );
     }
 
     /**

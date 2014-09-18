@@ -13,6 +13,9 @@
         "laravel/framework": "~4"
     },
     "autoload": {
+        "files": [
+            "src/Chee/Module/Lib/PclZip.php"
+        ],
         "psr-0": {
             "Chee\\Module": "src/"
         }
