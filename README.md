@@ -14,7 +14,7 @@ update `composer.json` in laravel root with:
 },
 "repositories": [
     {
-        "url": "http://192.168.10.30/shafiei/cheemodule.git",
+        "url": "git@bitbucket.org:magnait/cheemodule.git",
         "type": "git"
     }
 ],
