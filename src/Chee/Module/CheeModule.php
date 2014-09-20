@@ -443,7 +443,7 @@ class CheeModule
 
         if (count($error))
         {
-            $this->errors['dependecies'][$this->systemName] = $message;
+            $this->errors['dependecies'][$this->systemName] = $error;
             return false;
         }
         return true;
