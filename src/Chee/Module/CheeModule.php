@@ -369,7 +369,7 @@ class CheeModule
         if (!count($min) || !count($max))
         {
             $error['module.json'] = "module.json of this module is corrupted.";
-            $this->setDependencyCheeError($error);
+            $this->$errors = $error;
             return false;
         }
 
@@ -465,6 +465,17 @@ class CheeModule
             $deModule = ModuleModel::where('name', $module)->first();
             if ($deModule)
             {
+                preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version, $version);
+
+                if (!count($version))
+                {
+                    $error['module.json'] = "module.json of this module is corrupted.";
+                    $this->errors = $error;
+                    return false;
+                }
+
+                $version = $version[0];
+
                 $majorOffset = strpos($deModule->version, '.');
                 $major = substr($deModule->version, 0, $majorOffset);
 
@@ -595,14 +606,109 @@ class CheeModule
     public function zipInit($archive, $moduleName = null)
     {
         $moduleName = $moduleName ?: pathinfo($archive)['filename'];
+
         if ($this->moduleExists($moduleName))
         { //Upgrade
-
+            return $this->update($archive, $moduleName);
         }
         else
         { //Install
             return $this->moduleInit($archive, $moduleName);
         }
+    }
+
+    /**
+     * Update module
+    * @param $archive string path of zip
+    * @param $moduleName string
+    * @return bool
+    */
+    protected function update($archive, $moduleName)
+    {
+        $archive = $this->extractZip($archive, $this->getAssetDirectory().'#update');
+        if (!$archive) return false;
+
+        $this->files->deleteDirectory($archive->zipname);
+        if ($this->files->exists($archive->zipname))
+        {
+            $this->errors['update']['forbidden']['module'] = $archive->zipname;
+        }
+
+        //Check new version
+        $updateModuleDir =  $this->getAssetDirectory().'#update/'.$moduleName;
+
+        $currentVersion = $this->def($moduleName, 'version');
+        $updateVersion = $this->def($updateModuleDir, 'version', true);
+        if ($this->isNewerVersion($currentVersion, $updateVersion))
+        {
+
+        }
+        else
+        {
+            $this->errors['update']['version'] = 'This module has already been installed.';
+            return false;
+        }
+    }
+
+    /**
+     * detect new version
+     * @param $currentVersion string
+     * @param $updateVersion string
+     * @return bool
+     */
+    protected function isNewerVersion($currentVersion, $updateVersion)
+    {
+        $errors = array();
+
+        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$currentVersion, $currentVersion);
+        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$updateVersion, $updateVersion);
+
+        if (!count($currentVersion) || !count($updateVersion))
+        {
+            $error['module.json'] = "module.json of this module is corrupted.";
+            $this->errors = $error;
+            return false;
+        }
+
+        $currentVersion = $currentVersion[0];
+        $updateVersion = $updateVersion[0];
+
+        $curMajorOffset = strpos($currentVersion, '.');
+        $curMajor = (int) substr($currentVersion, 0, $curMajorOffset);
+
+        $curMinorOffset = strpos($currentVersion, '.', $curMajorOffset + 1);
+        $curMinor = (int) substr($currentVersion, $curMajorOffset + 1, $curMinorOffset - $curMajorOffset - 1);
+
+        $curPath = (int) substr($currentVersion, $curMinorOffset + 1, strlen($currentVersion) - $curMinorOffset);
+
+        $upMajorOffset = strpos($updateVersion, '.');
+        $upMajor = (int) substr($updateVersion, 0, $upMajorOffset);
+
+        $upMinorOffset = strpos($updateVersion, '.', $upMajorOffset + 1);
+        $upMinor = (int) substr($updateVersion, $upMajorOffset + 1, $upMinorOffset - $upMajorOffset - 1);
+
+        $upPath = (int) substr($updateVersion, $upMinorOffset + 1, strlen($updateVersion) - $upMinorOffset);
+
+        //Check dependency version
+        if ($upMajor > $curMajor)
+        {
+            return true;
+        }
+        elseif ($upMajor === $curMajor)
+        {
+            if ($upMinor > $curMinor)
+            {
+                return true;
+            }
+            elseif ($upMinor === $curMinor)
+            {
+                if ($upPath > $curPath)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -613,13 +719,8 @@ class CheeModule
      */
     protected function moduleInit($archive, $moduleName)
     {
-        $archive = new PclZip($archive);
-
-        if ($archive->extract(PCLZIP_OPT_PATH, base_path().'/'.$this->modulesPath) == 0)
-        {
-            $this->erros['moduleInit']['extract'] = $archive->error_string;
-            return false;
-        }
+        $archive = $this->extractZip($archive, base_path().'/'.$this->modulesPath);
+        if (!$archive) return false;
 
         $module = new ModuleModel;
         $module->name = $this->def($moduleName, 'name');
@@ -633,6 +734,29 @@ class CheeModule
         }
 
         return true;
+    }
+
+    /**
+     * Extract zip file
+     * @param $archive path of archive
+     * @param $target
+     * @param obj|false
+     */
+    protected function extractZip($archive, $target)
+    {
+        if (!$this->files->exists($target))
+        {
+            $this->files->makeDirectory($target, 0777, true);
+        }
+
+        $archive = new PclZip($archive);
+
+        if ($archive->extract(PCLZIP_OPT_PATH, $target) == 0)
+        {
+            $this->erros['extract'] = $archive->error_string;
+            return false;
+        }
+        return $archive;
     }
 
     /**
@@ -715,9 +839,13 @@ class CheeModule
      * @param $name string name of module
      * @return string
      */
-    public function getAssetDirectory($name)
+    public function getAssetDirectory($name = null)
     {
-        return public_path().$this->config->get('module::assets').'/'.$name;
+        if ($name)
+        {
+            return public_path().$this->config->get('module::assets').'/'.$name;
+        }
+        return public_path().$this->config->get('module::assets').'/';
     }
 
     /**
@@ -741,19 +869,21 @@ class CheeModule
 
     /**
      * Get module.json data of module
-     * @param $key string|null key of array
-     * @param $keyInKey string if first key is array second key can given
+     * @param $moduleName
+     * @param $key string key of array
+     * @param $isAddress string if first key is array second key can given
      * @return array|string
      */
-    protected function def($moduleName, $key = null, $keyInKey = null)
+    protected function def($moduleName, $key = null, $isAddress = false)
     {
-        $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
+        if($isAddress)
+            $definition = json_decode($this->app['files']->get($moduleName . '/module.json'), true);
+        else
+            $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
+
         if ($key)
             if (isset($definition[$key]))
-                if (is_null($keyInKey))
-                    return $definition[$key];
-                else
-                    return isset($definition[$key][$keyInKey]) ? $definition[$key][$keyInKey] : null;
+                return $definition[$key];
             else
                 return null;
         else
