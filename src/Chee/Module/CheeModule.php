@@ -3,7 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
-use Pclzip;
+use Chee\Pclzip\Pclzip;
 
 /**
  * CheeModule for manage module
