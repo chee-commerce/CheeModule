@@ -3,8 +3,6 @@
 
 ## Install
 
-### with composer git repository
-
 update `composer.json` in laravel root with:
 
 ```json
