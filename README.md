@@ -12,12 +12,6 @@ update `composer.json` in laravel root with:
 	"laravel/framework": "4.2.*",
 	"chee/module": "dev-master"
 },
-"repositories": [
-    {
-        "url": "git@bitbucket.org:magnait/cheemodule.git",
-        "type": "git"
-    }
-],
 ```
 and run `composer update`. then run:
 
