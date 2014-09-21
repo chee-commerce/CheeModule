@@ -10,12 +10,10 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "laravel/framework": "~4"
+        "laravel/framework": "~4",
+        "chee/pclzip": "dev-master"
     },
     "autoload": {
-        "files": [
-            "src/Chee/Module/Lib/PclZip.php"
-        ],
         "psr-0": {
             "Chee\\Module": "src/"
         }

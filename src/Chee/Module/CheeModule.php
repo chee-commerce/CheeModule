@@ -3,7 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
-use Chee\Module\Lib\PclZip;
+use Pclzip;
 
 /**
  * CheeModule for manage module
@@ -688,7 +688,7 @@ class CheeModule
 
         //Update database for update hook
         $module = $this->findOrFalse('name', $moduleName);
-        $module->version = $this->def($moduleName, 'version'); 
+        $module->version = $this->def($moduleName, 'version');
         $module->is_updated = 1;
         $module->save();
 
@@ -794,7 +794,7 @@ class CheeModule
             $this->files->makeDirectory($target, 0777, true);
         }
 
-        $archive = new PclZip($archive);
+        $archive = new Pclzip($archive);
 
         if ($archive->extract(PCLZIP_OPT_PATH, $target) == 0)
         {
