@@ -130,6 +130,11 @@ class CheeModule
                 $this->app['events']->fire('modules.install.'.$module->name, null);
                 $module->is_installed = 0;
             }
+            if ($module->is_updated)
+            {
+                $this->app['events']->fire('modules.update.'.$module->name, null);
+                $module->is_updated = 0;
+            }
             if ($module->is_enabled)
             {
                 $this->app['events']->fire('modules.enable.'.$module->name, null);
@@ -631,23 +636,62 @@ class CheeModule
         $this->files->deleteDirectory($archive->zipname);
         if ($this->files->exists($archive->zipname))
         {
-            $this->errors['update']['forbidden']['module'] = $archive->zipname;
+            $this->errors['update']['forbidden']['delete'] = 'Can not delete directory.'.$archive->zipname;
         }
 
         //Check new version
         $updateModuleDir =  $this->getAssetDirectory().'#update/'.$moduleName;
+        $ModuleDir = $this->getModuleDirectory($moduleName);
 
         $currentVersion = $this->def($moduleName, 'version');
-        $updateVersion = $this->def($updateModuleDir, 'version', true);
-        if ($this->isNewerVersion($currentVersion, $updateVersion))
-        {
-
-        }
-        else
+        $updateVersion = $this->def($updateModuleDir.'/module.json', 'version', true);
+        if (!$this->isNewerVersion($currentVersion, $updateVersion))
         {
             $this->errors['update']['version'] = 'This module has already been installed.';
             return false;
         }
+
+        //Move and replace new version
+        if (!$this->files->copyDirectory($updateModuleDir, $ModuleDir))
+        {
+            $this->errors['update']['move'] = 'Can not move files.';
+            return false;
+        }
+
+        //Delete uploaded module directory
+        if (!$this->files->deleteDirectory($updateModuleDir))
+        {
+            $this->errors['update']['forbidden']['delete'] = 'Can not delete directory.'.$updateModuleDir;
+        }
+
+        //Remove files specified
+        if ($this->files->exists($ModuleDir.'/update.json'))
+        {
+            $removes = $this->def($ModuleDir.'/update.json', 'remove', true);
+            if (array_key_exists('files', $removes))
+            {
+                foreach ($removes['files'] as $remove)
+                {
+                    $this->files->delete($ModuleDir.'/'.$remove);
+                }
+            }
+
+            if (array_key_exists('directories', $removes))
+            {
+                foreach ($removes['directories'] as $remove)
+                {
+                    $this->files->deleteDirectory($ModuleDir.'/'.$remove);
+                }
+            }
+            $this->files->delete($ModuleDir.'/update.json');
+        }
+
+        //Update database for update hook
+        $module = $this->findOrFalse('name', $moduleName);
+        $module->is_updated = 1;
+        $module->save();
+
+        return true;
     }
 
     /**
@@ -877,7 +921,7 @@ class CheeModule
     protected function def($moduleName, $key = null, $isAddress = false)
     {
         if($isAddress)
-            $definition = json_decode($this->app['files']->get($moduleName . '/module.json'), true);
+            $definition = json_decode($this->app['files']->get($moduleName), true);
         else
             $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
 

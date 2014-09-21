@@ -16,6 +16,7 @@ class module-name extends \Classes\Module\Module
         $events->listen('modules.enable.' . $this->name, 'module-name@enable');
         $events->listen('modules.disable.' . $this->name, 'module-name@disable');
         $events->listen('modules.reset.' . $this->name, 'module-name@reset');
+        $events->listen('modules.update.' . $this->name, 'module-name@update');
     }
 
     public function install($event)
@@ -44,6 +45,11 @@ class module-name extends \Classes\Module\Module
     }
 
     public function reset($event)
+    {
+
+    }
+
+    public function update($event)
     {
 
     }
