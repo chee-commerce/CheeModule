@@ -122,7 +122,7 @@ class CheeModule
         {
             $module->register();
         }
-        $modules = ModuleModel::where('is_enabled', 1)->orWhere('is_installed', 1)->get();
+        $modules = ModuleModel::where('is_enabled', 1)->orWhere('is_installed', 1)->orWhere('is_updated', 1)->get();
         foreach ($modules as $module)
         {
             if ($module->is_installed)
@@ -688,6 +688,7 @@ class CheeModule
 
         //Update database for update hook
         $module = $this->findOrFalse('name', $moduleName);
+        $module->version = $this->def($moduleName, 'version'); 
         $module->is_updated = 1;
         $module->save();
 
