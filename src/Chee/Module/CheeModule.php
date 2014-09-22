@@ -28,7 +28,7 @@ class CheeModule
      * Path of modules
      * @var string
      */
-    protected $modulesPath;
+    protected $path;
 
     /**
      * Array of Module
@@ -53,6 +53,12 @@ class CheeModule
      * @var string
      */
     protected $systemName = 'CheeCommerce';
+
+    /**
+     * Configuration file in every module
+     * @var string
+     */
+    protected $configFile = '/module.json';
 
     /**
      * Version of system like 4.5.2
@@ -87,7 +93,7 @@ class CheeModule
         $this->config = $config;
         $this->files = $files;
 
-        $this->modulesPath = $this->config->get('module::modules_path');
+        $this->path = base_path().'/'.$this->getConfig('path');
     }
 
     /**
@@ -244,13 +250,13 @@ class CheeModule
      * @param $modulesModel model
      * @return array
      */
-    public function getListModules($modulesModel)
+    protected function getListModules($modulesModel)
     {
         $modules = array();
         foreach ($modulesModel as $module)
         {
             $modules[$module->name]['name'] = $this->def($module->name, 'name');
-            $modules[$module->name]['icon'] = $this->config->get('module::assets').'/'.$module->name.'/'.$this->def($module->name, 'icon');
+            $modules[$module->name]['icon'] = $this->getConfig('assets').'/'.$module->name.'/'.$this->def($module->name, 'icon');
             $modules[$module->name]['description'] = $this->def($module->name, 'description');
             $modules[$module->name]['author'] = $this->def($module->name, 'author');
             $modules[$module->name]['website'] = $this->def($module->name, 'website');
@@ -608,18 +614,115 @@ class CheeModule
      * @param $moduleName string
      * @return bool
      */
-    public function zipInit($archive, $moduleName = null)
+    public function zipInit($archive, $archiveName)
     {
-        $moduleName = $moduleName ?: pathinfo($archive)['filename'];
+        //Extract zip
+        $extractPath = $this->getAssetDirectory().'/#tmp/'.$archiveName;
+        $archive = $this->extractZip($archive, $extractPath);
+        if (!$archive)
+        {
+            return false;
+        }
 
-        if ($this->moduleExists($moduleName))
-        { //Upgrade
-            return $this->update($archive, $moduleName);
+        //Delete uploaded zip directory
+        $this->files->deleteDirectory($archive->zipname);
+        if ($this->files->exists($archive->zipname))
+        {
+            $this->errors['zipinit']['forbidden']['delete'] = 'Can not delete directory.'.$archive->zipname;
+        }
+
+        $archivePath = $extractPath;
+        $moduleName = $this->def($archivePath.$this->configFile, 'name', true);
+
+        //Check module has requires file
+        if (!$this->checkRequires($archivePath))
+        {
+            $this->errors['zipinit']['requires'] = 'This package has not required files';
+            $result = false;
         }
         else
-        { //Install
-            return $this->moduleInit($archive, $moduleName);
+        {
+            if ($this->moduleExists($moduleName))
+            { //Upgrade
+                $result =  $this->update($archivePath, $moduleName);
+            }
+            else
+            { //Install
+                $result =  $this->moduleInit($archivePath, $moduleName);
+            }
         }
+
+        //Delete extracted zip directory
+        if (!$this->files->deleteDirectory($archivePath))
+        {
+            $this->errors['zipinit']['forbidden']['delete'] = 'Can not delete directory.'.$updateModuleDir;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Check module has required file
+     * @param $modulePath string
+     * @return bool
+     */
+    protected function checkRequires($modulePath)
+    {
+        $requires = $this->getConfig('requires', array());
+
+        foreach($requires as $key => $value)
+        {
+            if (is_array($value))
+            {
+                if (!$this->files->exists($modulePath.'/'.$key)) return false;
+                $jsonFile = json_decode($this->app['files']->get($modulePath.'/'.$key), true);
+                foreach($value as $key)
+                {
+                    if (!array_key_exists($key, $jsonFile)) return false;
+                    if (empty($jsonFile[$key])) return false;
+                }
+            }
+            else
+            {
+                if (!$this->files->exists($modulePath.'/'.$value)) return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Get configuration module
+     * @param $item string
+     * @param $default null|mixed
+     * @return mixed
+     */
+    protected function getConfig($item, $default = null)
+    {
+        return $this->config->get('module::'.$item, $default);
+    }
+
+
+    /**
+     * Initialize zip module for install
+     * @param $archive string path of zip
+     * @param $moduleName string
+     * @return bool
+     */
+    protected function moduleInit($archivePath, $moduleName)
+    {
+        //Move extracted module to modules path
+        if (!$this->files->copyDirectory($archivePath, $this->path.$moduleName))
+        {
+            $this->errors['moduleInit']['move'] = 'Can not move files.';
+            return false;
+        }
+
+        $module = new ModuleModel;
+        $module->name = $this->def($moduleName, 'name');
+        $module->version = $this->def($moduleName, 'version');
+        $module->save();
+
+        return true;
     }
 
     /**
@@ -628,19 +731,10 @@ class CheeModule
     * @param $moduleName string
     * @return bool
     */
-    protected function update($archive, $moduleName)
+    protected function update($archivePath, $moduleName)
     {
-        $archive = $this->extractZip($archive, $this->getAssetDirectory().'#update');
-        if (!$archive) return false;
-
-        $this->files->deleteDirectory($archive->zipname);
-        if ($this->files->exists($archive->zipname))
-        {
-            $this->errors['update']['forbidden']['delete'] = 'Can not delete directory.'.$archive->zipname;
-        }
-
         //Check new version
-        $updateModuleDir =  $this->getAssetDirectory().'#update/'.$moduleName;
+        $updateModuleDir =  $archivePath;
         $ModuleDir = $this->getModuleDirectory($moduleName);
 
         $currentVersion = $this->def($moduleName, 'version');
@@ -656,12 +750,6 @@ class CheeModule
         {
             $this->errors['update']['move'] = 'Can not move files.';
             return false;
-        }
-
-        //Delete uploaded module directory
-        if (!$this->files->deleteDirectory($updateModuleDir))
-        {
-            $this->errors['update']['forbidden']['delete'] = 'Can not delete directory.'.$updateModuleDir;
         }
 
         //Remove files specified
@@ -757,31 +845,6 @@ class CheeModule
     }
 
     /**
-     * Initialize zip module for install
-     * @param $archive string path of zip
-     * @param $moduleName string
-     * @return bool
-     */
-    protected function moduleInit($archive, $moduleName)
-    {
-        $archive = $this->extractZip($archive, base_path().'/'.$this->modulesPath);
-        if (!$archive) return false;
-
-        $module = new ModuleModel;
-        $module->name = $this->def($moduleName, 'name');
-        $module->version = $this->def($moduleName, 'version');
-        $module->save();
-
-        $this->files->deleteDirectory($archive->zipname);
-        if ($this->files->exists($archive->zipname))
-        {
-            $this->errors['moduleInit']['forbidden']['module'] = $archive->zipname;
-        }
-
-        return true;
-    }
-
-    /**
      * Extract zip file
      * @param $archive path of archive
      * @param $target
@@ -863,15 +926,15 @@ class CheeModule
     }
 
     /**
-     * Get path of speciic module
+     * Get path of specific module
      * @param $name string name of module
      * @return string
      */
     public function getModuleDirectory($name)
     {
-        if ($this->app['files']->exists(base_path($this->modulesPath.$name)))
+        if ($this->files->exists($this->path.'/'.$name))
         {
-            return base_path($this->modulesPath.$name);
+            return $this->path.'/'.$name;
         }
         else
         {
@@ -888,9 +951,9 @@ class CheeModule
     {
         if ($name)
         {
-            return public_path().$this->config->get('module::assets').'/'.$name;
+            return public_path().'/'.$this->getConfig('assets').'/'.$name;
         }
-        return public_path().$this->config->get('module::assets').'/';
+        return public_path().'/'.$this->getConfig('assets').'/';
     }
 
     /**
@@ -924,7 +987,7 @@ class CheeModule
         if($isAddress)
             $definition = json_decode($this->app['files']->get($moduleName), true);
         else
-            $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . '/module.json'), true);
+            $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . $this->configFile), true);
 
         if ($key)
             if (isset($definition[$key]))

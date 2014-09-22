@@ -1,7 +1,9 @@
 <?php
 
 return array(
-    'modules_path' => 'app/Modules/',
+    'path' => '/app/Modules',
+
+    'assets' => '/modules', //=>public/modules/MODULE_NAME
 
     'include' => array(
         'helpers.php',
@@ -12,5 +14,11 @@ return array(
         'routes.php'
     ),
 
-    'assets' => '/modules' //=>public/modules/MODULE_NAME
+    'requires' => array(
+        'module.json' => array(
+            'name',
+            'version'
+        )
+    ),
+
 );
