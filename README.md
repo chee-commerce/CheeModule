@@ -14,7 +14,7 @@ update `composer.json` in laravel root with:
 and run `composer update`. then run:
 
 ```terminal
-sudo php artisan migrate --path=vendor/chee/module/src/Chee/Module/Migrations/
+sudo php artisan migrate --package=chee/module
 ```
 
 

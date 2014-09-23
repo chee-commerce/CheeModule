@@ -738,7 +738,7 @@ class CheeModule
         $ModuleDir = $this->getModuleDirectory($moduleName);
 
         $currentVersion = $this->def($moduleName, 'version');
-        $updateVersion = $this->def($updateModuleDir.'/module.json', 'version', true);
+        $updateVersion = $this->def($updateModuleDir.$this->configFile, 'version', true);
         if (!$this->isNewerVersion($currentVersion, $updateVersion))
         {
             $this->errors['update']['version'] = 'This module has already been installed.';
@@ -752,9 +752,11 @@ class CheeModule
             return false;
         }
 
+
         //Remove files specified
         if ($this->files->exists($ModuleDir.'/update.json'))
         {
+            //dd($updateModuleDir);
             $removes = $this->def($ModuleDir.'/update.json', 'remove', true);
             if (array_key_exists('files', $removes))
             {
@@ -775,12 +777,22 @@ class CheeModule
         }
 
         //Update database for update hook
+        $this->updateRecordModule($moduleName);
+
+        return true;
+    }
+
+    /**
+     * Update record module in database
+     * @param $moduleName string
+     * @return void
+     */
+    protected function updateRecordModule($moduleName)
+    {
         $module = $this->findOrFalse('name', $moduleName);
         $module->version = $this->def($moduleName, 'version');
         $module->is_updated = 1;
         $module->save();
-
-        return true;
     }
 
     /**
