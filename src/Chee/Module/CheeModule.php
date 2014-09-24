@@ -666,7 +666,6 @@ class CheeModule
         }
 
         $archivePath = $extractPath;
-        $moduleName = $this->def($archivePath.$this->configFile, 'name', true);
 
         //Check module has requires file
         if (!$this->checkRequires($archivePath))
@@ -676,6 +675,7 @@ class CheeModule
         }
         else
         {
+            $moduleName = $this->def($archivePath.$this->configFile, 'name', true);
             if ($this->moduleExists($moduleName))
             { //Upgrade
                 $result =  $this->update($archivePath, $moduleName);
@@ -745,7 +745,7 @@ class CheeModule
     protected function moduleInit($archivePath, $moduleName)
     {
         //Move extracted module to modules path
-        if (!$this->files->copyDirectory($archivePath, $this->path.$moduleName))
+        if (!$this->files->copyDirectory($archivePath, $this->path.'/'.$moduleName))
         {
             $this->errors['moduleInit']['move'] = 'Can not move files.';
             return false;
