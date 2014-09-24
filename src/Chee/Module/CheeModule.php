@@ -289,6 +289,40 @@ class CheeModule
     }
 
     /**
+     * Remove assets of a module
+     * @param $name string
+     * @return bool
+     */
+    public function removeAssets($name)
+    {
+        $assets = $this->getAssetDirectory($name);
+
+        $this->files->deleteDirectory($assets);
+        if ($this->files->exists($assets))
+        {
+            $this->errors['delete']['forbidden']['assets'] = $assets;
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Remove module directory
+     * @param $name
+     * @return boll
+     */
+    protected function removeModuleDirectory($name)
+    {
+        $this->files->deleteDirectory($this->getModuleDirectory($name));
+        if($this->files->exists($this->getModuleDirectory($name)))
+        {
+            $this->errors['delete']['forbidden']['module'] = $this->getModuleDirectory($name);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Install module and build assets
      * @param $name string
      * @return bool
@@ -614,10 +648,10 @@ class CheeModule
      * @param $moduleName string
      * @return bool
      */
-    public function zipInit($archive, $archiveName)
+    public function zipInit($archive)
     {
         //Extract zip
-        $extractPath = $this->getAssetDirectory().'/#tmp/'.$archiveName;
+        $extractPath = $this->getAssetDirectory().'/#tmp/'.uniqid();
         $archive = $this->extractZip($archive, $extractPath);
         if (!$archive)
         {
@@ -746,35 +780,15 @@ class CheeModule
         }
 
         //Move and replace new version
+        $this->removeModuleDirectory($moduleName);
         if (!$this->files->copyDirectory($updateModuleDir, $ModuleDir))
         {
             $this->errors['update']['move'] = 'Can not move files.';
             return false;
         }
 
-
-        //Remove files specified
-        if ($this->files->exists($ModuleDir.'/update.json'))
-        {
-            //dd($updateModuleDir);
-            $removes = $this->def($ModuleDir.'/update.json', 'remove', true);
-            if (array_key_exists('files', $removes))
-            {
-                foreach ($removes['files'] as $remove)
-                {
-                    $this->files->delete($ModuleDir.'/'.$remove);
-                }
-            }
-
-            if (array_key_exists('directories', $removes))
-            {
-                foreach ($removes['directories'] as $remove)
-                {
-                    $this->files->deleteDirectory($ModuleDir.'/'.$remove);
-                }
-            }
-            $this->files->delete($ModuleDir.'/update.json');
-        }
+        $this->removeAssets($moduleName);
+        $this->buildAssets($moduleName);
 
         //Update database for update hook
         $this->updateRecordModule($moduleName);
@@ -909,17 +923,9 @@ class CheeModule
             $this->app['events']->fire('modules.delete.'.$name, null);
             $module->delete();
 
-            $this->files->deleteDirectory($this->getAssetDirectory($name));
-            if ($this->files->exists($this->getAssetDirectory($name)))
-            {
-                $this->errors['delete']['forbidden']['assest'] = $this->getAssetDirectory($name);
-            }
+            $this->removeAssets($name);
 
-            $this->files->deleteDirectory($this->getModuleDirectory($name));
-            if($this->files->exists($this->getModuleDirectory($name)))
-            {
-                $this->errors['delete']['forbidden']['module'] = $this->getModuleDirectory($name);
-            }
+            $this->removeModuleDirectory($name);
 
             return true;
         }
