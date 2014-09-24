@@ -625,7 +625,7 @@ class CheeModule
         }
 
         //Delete uploaded zip directory
-        $this->files->deleteDirectory($archive->zipname);
+        $this->files->delete($archive->zipname);
         if ($this->files->exists($archive->zipname))
         {
             $this->errors['zipinit']['forbidden']['delete'] = 'Can not delete directory.'.$archive->zipname;
