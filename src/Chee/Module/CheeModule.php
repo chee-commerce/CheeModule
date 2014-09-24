@@ -631,11 +631,6 @@ class CheeModule
                 $this->app['events']->fire('modules.uninstall.'.$name, null);
                 $module->installed = 0;
                 $module->save();
-                $this->files->deleteDirectory($this->getAssetDirectory($name));
-                if ($this->files->exists($this->getAssetDirectory($name)))
-                {
-                    $this->errors['uninstall']['forbidden']['assest'] = $this->getAssetDirectory($name);
-                }
                 return true;
             }
         }
@@ -750,6 +745,8 @@ class CheeModule
             $this->errors['moduleInit']['move'] = 'Can not move files.';
             return false;
         }
+
+        $this->buildAssets($moduleName);
 
         $module = new ModuleModel;
         $module->name = $this->def($moduleName, 'name');
