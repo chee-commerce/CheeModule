@@ -12,6 +12,11 @@ class ModuleServiceProvider extends ServiceProvider
 	 */
 	protected $defer = false;
 
+	/**
+	* Bootstrap the application events.
+	*
+	* @return void
+	*/
 	public function boot()
 	{
 		$this->package('chee/module');
