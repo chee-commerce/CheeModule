@@ -707,8 +707,16 @@ class CheeModule
                 $jsonFile = json_decode($this->app['files']->get($modulePath.'/'.$key), true);
                 foreach($value as $key)
                 {
-                    if (!array_key_exists($key, $jsonFile)) return false;
-                    if (empty($jsonFile[$key])) return false;
+                    if (is_array($jsonFile))
+                    {
+                        if (!array_key_exists($key, $jsonFile)) return false;
+                        if (empty($jsonFile[$key])) return false;
+                    }
+                    else
+                    {
+                        $this->errors['checkRequires']['jsonFile'] = $this->configFile.' is corrupted.';
+                        return false;
+                    }
                 }
             }
             else
