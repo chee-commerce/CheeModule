@@ -414,7 +414,7 @@ class CheeModule
         if (!count($min) || !count($max))
         {
             $error['module.json'] = "module.json of this module is corrupted.";
-            $this->$errors = $error;
+            $this->errors = $error;
             return false;
         }
 
