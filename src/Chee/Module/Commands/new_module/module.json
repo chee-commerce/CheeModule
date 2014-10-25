@@ -1,5 +1,5 @@
 {
-    "name": "module-name",
+    "name": "#moduleName",
 
     "description": "your module description",
 
@@ -14,7 +14,7 @@
     "icon": "icon.png",
 
     "provider": [
-        "Modules\\module-name\\module-nameServiceProvider"
+        "Modules\\#moduleName\\#moduleNameServiceProvider"
     ],
 
     "include": [

@@ -13,10 +13,10 @@ class ModuleServiceProvider extends ServiceProvider
 	protected $defer = false;
 
 	/**
-	* Bootstrap the application events.
-	*
-	* @return void
-	*/
+	 * Bootstrap the application events.
+	 *
+	 * @return void
+	 */
 	public function boot()
 	{
 		$this->package('chee/module');
@@ -53,6 +53,11 @@ class ModuleServiceProvider extends ServiceProvider
 
 	public function bootCommands()
 	{
+		$this->app['CheeModule'] = $this->app->share(function($app)
+		{
+			return new Commands\ListCommand($app);
+		});
+
 		$this->app['CheeModule.create'] = $this->app->share(function($app)
 		{
 			return new Commands\CreateCommand($app);
@@ -64,8 +69,9 @@ class ModuleServiceProvider extends ServiceProvider
 		});
 
 		$this->commands(array(
+			'CheeModule',
 			'CheeModule.create',
-			'CheeModule.buildAssets'
+			'CheeModule.buildAssets',
 		));
 	}
 

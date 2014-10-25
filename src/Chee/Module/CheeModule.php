@@ -93,11 +93,12 @@ class CheeModule
         $this->config = $config;
         $this->files = $files;
 
-        $this->path = base_path().'/'.$this->getConfig('path');
+        $this->path = app_path().'/'.$this->getConfig('path');
     }
 
     /**
      * Get all module from database and initialize
+     * @return void
      */
     public function start()
     {
@@ -109,7 +110,7 @@ class CheeModule
                 $path = $this->getModuleDirectory($module->name);
                 if ($path)
                 {
-                    if ($this->checkModuleName($path . '/module.json', $module->name))
+                    if ($this->checkModuleName($path.$this->configFile, $module->name))
                     {
                         $name = $module->name;
                         $this->modules[$name] = new Module($this->app, $module->name, $path);
@@ -121,6 +122,7 @@ class CheeModule
 
     /**
      * Register modules with Moduel class
+     * @return void
      */
     public function register()
     {
@@ -1008,7 +1010,7 @@ class CheeModule
     protected function def($moduleName, $key = null, $isAddress = false)
     {
         if($isAddress)
-            $definition = json_decode($this->app['files']->get($moduleName), true);
+            $definition = json_decode($this->app['files']->get($this->path.'/'.$moduleName), true);
         else
             $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . $this->configFile), true);
 

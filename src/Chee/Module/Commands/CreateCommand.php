@@ -20,14 +20,19 @@ class CreateCommand extends AbstractCommand
 	 */
 	protected $description = 'Create a new dev module for CheeModule manager.';
 
+
+    /**
+     * Create module
+     */
     public function fire()
     {
         $name = studly_case(substr($this->argument('name'), strpos($this->argument('name'), '=') + 1));
-        $modulePath = $this->modulesPath.$name;
+
+        $modulePath = $this->modulesPath.'/'.$name;
 
         if (empty($name))
         {
-            $this->error('Please write module name');
+            $this->error('Please write correct module name');
             exit;
         }
 
@@ -50,19 +55,20 @@ class CreateCommand extends AbstractCommand
         }
 
         $this->info('Generating module '.$name);
-        $this->info('Please wait...');
 
         $this->app['files']->makeDirectory($modulePath, 0775);
 
         $moduleRoutes = $modulePath.'/routes.php';
         $moduleJSON = $modulePath.'/module.json';
         $moduleFile = $modulePath.'/'.$name.'.php';
+        $moduleSetup = $modulePath.'/Setup.php';
         $moduleProvider = $modulePath.'/'.$name.'ServiceProvider.php';
 
-        $this->app['files']->put($moduleRoutes, $this->app['files']->get(__DIR__.'/dev-routes.php.txt'));
-        $this->app['files']->put($moduleJSON, $this->app['files']->get(__DIR__.'/dev-module.json.txt'));
-        $this->app['files']->put($moduleFile, $this->app['files']->get(__DIR__.'/dev-module.php.txt'));
-        $this->app['files']->put($moduleProvider, $this->app['files']->get(__DIR__.'/dev-provider.php.txt'));
+        $this->app['files']->put($moduleRoutes, $this->app['files']->get(__DIR__.'/new_module/routes.php'));
+        $this->app['files']->put($moduleJSON, $this->app['files']->get(__DIR__.'/new_module/module.json'));
+        $this->app['files']->put($moduleFile, $this->app['files']->get(__DIR__.'/new_module/module.php'));
+        $this->app['files']->put($moduleSetup, $this->app['files']->get(__DIR__.'/new_module/setup.php'));
+        $this->app['files']->put($moduleProvider, $this->app['files']->get(__DIR__.'/new_module/provider.php'));
 
         $this->app['files']->makeDirectory($modulePath . '/assets', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/config', 0775);
@@ -72,12 +78,13 @@ class CreateCommand extends AbstractCommand
 		$this->app['files']->makeDirectory($modulePath . '/migrations', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/views', 0775);
 
-        file_put_contents($moduleRoutes, str_replace('module-name', $name, file_get_contents($moduleRoutes)));
-        file_put_contents($moduleJSON, str_replace('module-name', $name, file_get_contents($moduleJSON)));
-        file_put_contents($moduleFile, str_replace('module-name', $name, file_get_contents($moduleFile)));
-        file_put_contents($moduleProvider, str_replace('module-name', $name, file_get_contents($moduleProvider)));
+        file_put_contents($moduleRoutes, str_replace('#moduleName', $name, file_get_contents($moduleRoutes)));
+        file_put_contents($moduleJSON, str_replace('#moduleName', $name, file_get_contents($moduleJSON)));
+        file_put_contents($moduleFile, str_replace('#moduleName', $name, file_get_contents($moduleFile)));
+        file_put_contents($moduleSetup, str_replace('#moduleName', $name, file_get_contents($moduleSetup)));
+        file_put_contents($moduleProvider, str_replace('#moduleName', $name, file_get_contents($moduleProvider)));
 
-        $this->app['files']->copy(__DIR__.'/icon.png', $modulePath.'/assets/icon.png');
+        $this->app['files']->copy(__DIR__.'/new_module/icon.png', $modulePath.'/assets/icon.png');
 
         $this->info('module '.$name.' generated successfully in '.$modulePath.'.');
 

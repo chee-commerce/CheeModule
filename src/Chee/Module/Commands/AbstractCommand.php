@@ -14,6 +14,10 @@ class AbstractCommand extends Command {
 	 */
 	protected $app;
 
+	/**
+	 * Path of module
+	 * @var string
+	 */
 	protected $modulesPath;
 
 	/**
@@ -26,7 +30,7 @@ class AbstractCommand extends Command {
 		parent::__construct();
 
 		$this->app = $app;
-		$this->modulesPath = $this->app['config']->get('module::modules_path');
+		$this->modulesPath = app_path().'/'.$this->app['config']->get('module::path');
 	}
 
 	/**
@@ -61,13 +65,13 @@ class AbstractCommand extends Command {
 
 	protected function getModulesDirectories()
 	{
-		$modulesDirectories = $this->app['files']->directories(base_path($this->modulesPath));
+		$modulesDirectories = $this->app['files']->directories($this->modulesPath);
 		$arr = array();
 		foreach ($modulesDirectories as $moduleDirectory)
 		{
 			array_push($arr, basename($moduleDirectory));
 		}
-		
+
 		return $arr;
 	}
 

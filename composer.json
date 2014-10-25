@@ -1,7 +1,7 @@
 {
     "name": "chee/module",
     "description": "Module manager build for Chee Shop, but you can use on any laravel application",
-    "license": "MIT",
+    "license": "OSL-3.0",
     "authors": [
         {
             "name": "CheeCommerce",

@@ -80,7 +80,6 @@ class Module extends ServiceProvider
                 foreach ($providers as $provider)
                 {
                     $this->app->register($instance = new $provider($this->app));
-                    $this->app['events']->fire('modules.install.' . $this->name);
                 }
             }
             else
