@@ -1010,7 +1010,7 @@ class CheeModule
     protected function def($moduleName, $key = null, $isAddress = false)
     {
         if($isAddress)
-            $definition = json_decode($this->app['files']->get($this->path.'/'.$moduleName), true);
+            $definition = json_decode($this->app['files']->get($moduleName), true);
         else
             $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . $this->configFile), true);
 

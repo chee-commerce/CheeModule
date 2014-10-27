@@ -72,11 +72,10 @@ class CreateCommand extends AbstractCommand
 
         $this->app['files']->makeDirectory($modulePath . '/assets', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/config', 0775);
-		$this->app['files']->makeDirectory($modulePath . '/controllers', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/lang', 0775);
-		$this->app['files']->makeDirectory($modulePath . '/models', 0775);
-		$this->app['files']->makeDirectory($modulePath . '/migrations', 0775);
 		$this->app['files']->makeDirectory($modulePath . '/views', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/Models', 0775);
+		$this->app['files']->makeDirectory($modulePath . '/Controllers', 0775);
 
         file_put_contents($moduleRoutes, str_replace('#moduleName', $name, file_get_contents($moduleRoutes)));
         file_put_contents($moduleJSON, str_replace('#moduleName', $name, file_get_contents($moduleJSON)));
