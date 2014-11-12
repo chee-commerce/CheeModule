@@ -14,14 +14,14 @@ class CreateModulesTable extends Migration {
 	{
 		Schema::create('modules', function(Blueprint $table)
 		{
-			$table->increments('id');
-			$table->string('name', 150);
-			$table->string('version', 50);
-			$table->boolean('installed');
-			$table->boolean('status');
-			$table->boolean('is_enabled');
-			$table->boolean('is_installed');
-			$table->boolean('is_updated');
+			$table->increments('module_id');
+			$table->string('module_name', 150);
+			$table->string('module_version', 50);
+			$table->boolean('module_installed');
+			$table->boolean('module_status');
+			$table->boolean('module_is_enabled');
+			$table->boolean('module_is_installed');
+			$table->boolean('module_is_updated');
 		});
 	}
 

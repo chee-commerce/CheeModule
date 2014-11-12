@@ -8,4 +8,6 @@ class ModuleModel extends Model {
     public $table = 'modules';
 
     public $timestamps = false;
+    
+    protected $primaryKey = 'module_id';
 }

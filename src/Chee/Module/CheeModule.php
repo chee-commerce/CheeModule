@@ -105,15 +105,15 @@ class CheeModule
         $modules = ModuleModel::all();
         foreach($modules as $module)
         {
-            if ($module->installed && $module->status)
+            if ($module->module_installed && $module->module_status)
             {
-                $path = $this->getModuleDirectory($module->name);
+                $path = $this->getModuleDirectory($module->module_name);
                 if ($path)
                 {
-                    if ($this->checkModuleName($path.$this->configFile, $module->name))
+                    if ($this->checkModuleName($path.$this->configFile, $module->module_name))
                     {
-                        $name = $module->name;
-                        $this->modules[$name] = new Module($this->app, $module->name, $path);
+                        $name = $module->module_name;
+                        $this->modules[$name] = new Module($this->app, $module->module_name, $path);
                     }
                 }
             }
@@ -130,23 +130,26 @@ class CheeModule
         {
             $module->register();
         }
-        $modules = ModuleModel::where('is_enabled', 1)->orWhere('is_installed', 1)->orWhere('is_updated', 1)->get();
+        $modules = ModuleModel::where('module_is_enabled', 1)
+                                ->orWhere('module_is_installed', 1)
+                                ->orWhere('module_is_updated', 1)
+                                ->get();
         foreach ($modules as $module)
         {
-            if ($module->is_installed)
+            if ($module->module_is_installed)
             {
-                $this->app['events']->fire('modules.install.'.$module->name, null);
-                $module->is_installed = 0;
+                $this->app['events']->fire('modules.install.'.$module->module_name, null);
+                $module->module_is_installed = 0;
             }
-            if ($module->is_updated)
+            if ($module->module_is_updated)
             {
-                $this->app['events']->fire('modules.update.'.$module->name, null);
-                $module->is_updated = 0;
+                $this->app['events']->fire('modules.update.'.$module->module_name, null);
+                $module->module_is_updated = 0;
             }
-            if ($module->is_enabled)
+            if ($module->module_is_enabled)
             {
-                $this->app['events']->fire('modules.enable.'.$module->name, null);
-                $module->is_enabled = 0;
+                $this->app['events']->fire('modules.enable.'.$module->module_name, null);
+                $module->module_is_enabled = 0;
             }
             $module->save();
         }
@@ -159,13 +162,13 @@ class CheeModule
      */
     public function enable($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if(!$module->status && $module->installed)
+            if(!$module->module_status && $module->module_installed)
             {
-                $module->status = 1;
-                $module->is_enabled = 1;
+                $module->module_status = 1;
+                $module->module_is_enabled = 1;
                 $module->save();
                 return true;
             }
@@ -184,12 +187,12 @@ class CheeModule
      */
     public function disable($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if($module->status && $module->installed)
+            if($module->module_status && $module->module_installed)
             {
-                $module->status = 0;
+                $module->module_status = 0;
                 $module->save();
                 $this->app['events']->fire('modules.disable.'.$name, null);
                 return true;
@@ -208,13 +211,13 @@ class CheeModule
      */
     public function reset($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if($module->status && $module->installed)
+            if($module->module_status && $module->module_installed)
             {
                 $this->app['events']->fire('modules.reset.'.$name, null);
-                $module->status = 0;
+                $module->module_status = 0;
                 $module->save();
                 $this->app['events']->fire('modules.disable.'.$name, null);
                 return true;
@@ -243,7 +246,7 @@ class CheeModule
      */
     public function getListCustomModules($status = 1, $installed = 1)
     {
-        $modulesModel = ModuleModel::where('status', $status)->where('installed', $installed)->get();
+        $modulesModel = ModuleModel::where('module_status', $status)->where('module_installed', $installed)->get();
         return $this->getListModules($modulesModel);
     }
 
@@ -257,12 +260,12 @@ class CheeModule
         $modules = array();
         foreach ($modulesModel as $module)
         {
-            $modules[$module->name]['name'] = $this->def($module->name, 'name');
-            $modules[$module->name]['icon'] = $this->getConfig('assets').'/'.$module->name.'/'.$this->def($module->name, 'icon');
-            $modules[$module->name]['description'] = $this->def($module->name, 'description');
-            $modules[$module->name]['author'] = $this->def($module->name, 'author');
-            $modules[$module->name]['website'] = $this->def($module->name, 'website');
-            $modules[$module->name]['version'] = $this->def($module->name, 'version');
+            $modules[$module->module_name]['name'] = $this->def($module->module_name, 'name');
+            $modules[$module->module_name]['icon'] = $this->getConfig('assets').'/'.$module->module_name.'/'.$this->def($module->module_name, 'icon');
+            $modules[$module->module_name]['description'] = $this->def($module->module_name, 'description');
+            $modules[$module->module_name]['author'] = $this->def($module->module_name, 'author');
+            $modules[$module->module_name]['website'] = $this->def($module->module_name, 'website');
+            $modules[$module->module_name]['version'] = $this->def($module->module_name, 'version');
         }
         return $modules;
     }
@@ -331,10 +334,10 @@ class CheeModule
      */
     public function install($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if (!$module->installed)
+            if (!$module->module_installed)
             {
                 //Check require version for system and module dependecies
                 $cheeCommerceRequire = $this->def($name, $this->systemName);
@@ -365,10 +368,10 @@ class CheeModule
      */
     public function forceInstall($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if (!$module->installed)
+            if (!$module->module_installed)
             {
                 //Check module dependecies is installed
                 $moduleDependency = $this->def($name, 'require');
@@ -392,12 +395,12 @@ class CheeModule
 
     protected function installProccess($module)
     {
-        $module->installed = 1;
-        $module->status = 1;
-        $module->is_enabled = 1;
-        $module->is_installed = 1;
+        $module->module_installed = 1;
+        $module->module_status = 1;
+        $module->module_is_enabled = 1;
+        $module->module_is_installed = 1;
         $module->save();
-        $this->buildAssets($module->name);
+        $this->buildAssets($module->module_name);
         return true;
     }
 
@@ -509,7 +512,7 @@ class CheeModule
 
         foreach ($dependencies as $module => $version)
         {
-            $deModule = ModuleModel::where('name', $module)->first();
+            $deModule = ModuleModel::where('module_name', $module)->first();
             if ($deModule)
             {
                 preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version, $version);
@@ -588,7 +591,7 @@ class CheeModule
 
         foreach ($dependencies as $module => $version)
         {
-            $deModule = ModuleModel::where('name', $module)->first();
+            $deModule = ModuleModel::where('module_name', $module)->first();
             if (!$deModule)
             {
                 $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
@@ -620,18 +623,18 @@ class CheeModule
      */
     public function uninstall($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
-            if ($module->installed)
+            if ($module->module_installed)
             {
-                if ($module->status)
+                if ($module->module_status)
                 {
                     $this->app['events']->fire('modules.disable.'.$name, null);
-                    $module->status = 0;
+                    $module->module_status = 0;
                 }
                 $this->app['events']->fire('modules.uninstall.'.$name, null);
-                $module->installed = 0;
+                $module->module_installed = 0;
                 $module->save();
                 return true;
             }
@@ -759,8 +762,8 @@ class CheeModule
         $this->buildAssets($moduleName);
 
         $module = new ModuleModel;
-        $module->name = $this->def($moduleName, 'name');
-        $module->version = $this->def($moduleName, 'version');
+        $module->module_name = $this->def($moduleName, 'name');
+        $module->module_version = $this->def($moduleName, 'version');
         $module->save();
 
         return true;
@@ -810,9 +813,9 @@ class CheeModule
      */
     protected function updateRecordModule($moduleName)
     {
-        $module = $this->findOrFalse('name', $moduleName);
-        $module->version = $this->def($moduleName, 'version');
-        $module->is_updated = 1;
+        $module = $this->findOrFalse('module_name', $moduleName);
+        $module->module_version = $this->def($moduleName, 'version');
+        $module->module_is_updated = 1;
         $module->save();
     }
 
@@ -907,7 +910,7 @@ class CheeModule
      */
     public function moduleExists($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
             return true;
@@ -922,7 +925,7 @@ class CheeModule
      */
     public function delete($name)
     {
-        $module = $this->findOrFalse('name', $name);
+        $module = $this->findOrFalse('module_name', $name);
         if ($module)
         {
             $this->app['events']->fire('modules.disable.'.$name, null);
