@@ -14,8 +14,7 @@ return array(
         'observers.php',
         'filters.php',
         'composers.php',
-        'routes.php',
-        'setup.php'
+        'routes.php'
     ),
 
     //required files for install a module
