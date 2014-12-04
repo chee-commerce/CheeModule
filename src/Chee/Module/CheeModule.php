@@ -1,8 +1,9 @@
 <?php namespace Chee\Module;
 
 use Illuminate\Foundation\Application;
-use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
+use Chee\Module\Models\ModuleModel;
+use Illuminate\Config\Repository;
 use Chee\Pclzip\Pclzip;
 
 /**
