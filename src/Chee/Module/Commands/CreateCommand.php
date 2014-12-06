@@ -4,7 +4,7 @@ use Illuminate\Console\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Foundation\Application;
-use Chee\Module\ModuleModel;
+use Chee\Module\Models\ModuleModel;
 
 class CreateCommand extends AbstractCommand
 {
@@ -42,7 +42,7 @@ class CreateCommand extends AbstractCommand
             exit;
         }
 
-        $module = ModuleModel::where('name', $name)->first();
+        $module = ModuleModel::where('module_name', $name)->first();
         if ($module)
         {
             $this->error('Module '.$name.' created before [database].');
@@ -88,10 +88,10 @@ class CreateCommand extends AbstractCommand
         $this->info('module '.$name.' generated successfully in '.$modulePath.'.');
 
         $model = new ModuleModel;
-        $model->name = $name;
-        $model->status = 0;
-        $model->installed = 0;
-        $model->version = '0.0.1';
+        $model->module_name = $name;
+        $model->module_status = 0;
+        $model->module_installed = 0;
+        $model->module_version = '0.0.1';
         $model->save();
         $this->error('This module has been disabled and uninstalled.');
     }

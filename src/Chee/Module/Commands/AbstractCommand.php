@@ -4,7 +4,7 @@ use Illuminate\Console\Command;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Foundation\Application;
-use Chee\Module\ModuleModel;
+use Chee\Module\Models\ModuleModel;
 
 class AbstractCommand extends Command {
 	/**
