@@ -11,14 +11,15 @@
     "require": {
         "php": ">=5.4.0",
         "laravel/framework": "~4",
-        "chee/pclzip": "dev-master"
+        "chee/pclzip": "dev-master",
+        "chee/version": "dev-master"
     },
     "autoload": {
         "classmap": [
             "src/migrations"
         ],
-        "psr-0": {
-            "Chee\\Module": "src/"
+        "psr-4": {
+            "Chee\\Module\\": "src/Chee/Module/"
         }
     }
 }
