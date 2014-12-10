@@ -110,7 +110,6 @@ class CheeModule
         $this->sysMinorVersion = $this->getConfig('sysMinorVersion');
         $this->sysPathVersion = $this->getConfig('sysPathVersion');
         $this->configFile = $this->getConfig('configFile');
-        dd($this->systemName);
     }
 
     /**
