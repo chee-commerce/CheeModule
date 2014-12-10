@@ -3,7 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use Chee\Module\Models\ModuleModel;
+use Illuminate\Support\MessageBag;
 use Illuminate\Config\Repository;
+use Chee\Version\Version;
 use Chee\Pclzip\Pclzip;
 
 /**
@@ -45,7 +47,7 @@ class CheeModule
 
     /**
      * Keep errors
-     * @var array
+     * @var Illuminate\Support\MessageBag
      */
     protected $errors = array();
 
@@ -53,40 +55,45 @@ class CheeModule
      * use CheeModule for?
      * @var string
      */
-    protected $systemName = 'CheeCommerce';
+    protected $systemName;
 
     /**
      * Configuration file in every module
      * @var string
      */
-    protected $configFile = '/module.json';
+    protected $configFile;
 
     /**
      * Version of system like 4.5.2
      * @var string
      */
-    protected $sysVersion = CH_VERSION;
+    protected $sysVersion;
 
     /**
      * Major version of system like 4
      * @var int
      */
-    protected $sysMajorVersion = CH_MAJOR_VERSION;
+    protected $sysMajorVersion;
 
     /**
      * Major version of system like 5
      * @var int
      */
-    protected $sysMinorVersion = CH_MINOR_VERSION;
+    protected $sysMinorVersion;
 
     /**
      * Major version of system like 2
      * @var int
      */
-    protected $sysPathVersion = CH_PATH_VERSION;
+    protected $sysPathVersion;
 
     /**
      * Initialize class
+     *
+     * @param Illuminate\Foundation\Application $app
+     * @param Illuminate\Config\Repository $config
+     * @param Illuminate\Filesystem\Filesystem $files
+     * @return void
      */
     public function __construct(Application $app, Repository $config, Filesystem $files)
     {
@@ -94,35 +101,40 @@ class CheeModule
         $this->config = $config;
         $this->files = $files;
 
+        $this->errors = new MessageBag();
+
         $this->path = app_path().'/'.$this->getConfig('path');
+        $this->systemName = $this->getConfig('systemName');
+        $this->sysVersion = $this->getConfig('sysVersion');
+        $this->sysMajorVersion = $this->getConfig('sysMajorVersion');
+        $this->sysMinorVersion = $this->getConfig('sysMinorVersion');
+        $this->sysPathVersion = $this->getConfig('sysPathVersion');
+        $this->configFile = $this->getConfig('configFile');
+        dd($this->systemName);
     }
 
     /**
      * Get all module from database and initialize
+     *
      * @return void
      */
     public function start()
     {
-        $modules = ModuleModel::all();
+        $modules = ModuleModel::where('module_status', 1)->get();
         foreach($modules as $module)
         {
-            if ($module->module_installed && $module->module_status)
+            $path = $this->getModuleDirectory($module->module_name);
+            if ($path)
             {
-                $path = $this->getModuleDirectory($module->module_name);
-                if ($path)
-                {
-                    if ($this->checkModuleName($path.$this->configFile, $module->module_name))
-                    {
-                        $name = $module->module_name;
-                        $this->modules[$name] = new Module($this->app, $module->module_name, $path);
-                    }
-                }
+                $name = $module->module_name;
+                $this->modules[$name] = new Module($this->app, $module->module_name, $path);
             }
         }
     }
 
     /**
      * Register modules with Moduel class
+     *
      * @return void
      */
     public function register()
@@ -131,10 +143,8 @@ class CheeModule
         {
             $module->register();
         }
-        $modules = ModuleModel::where('module_is_enabled', 1)
-                                ->orWhere('module_is_installed', 1)
-                                ->orWhere('module_is_updated', 1)
-                                ->get();
+        $modules = ModuleModel::where('module_status', 1)->get();
+
         foreach ($modules as $module)
         {
             if ($module->module_is_installed)
@@ -158,72 +168,46 @@ class CheeModule
 
     /**
      * Enable module to load
-     * @param name string
-     * @return boolean
+     *
+     * @param string #moduleName
+     * @return bool
      */
-    public function enable($name)
+    public function enable($moduleName)
     {
-        $module = $this->findOrFalse('module_name', $name);
+        $module = $this->findOrFalse('module_name', $moduleName);
         if ($module)
         {
-            if(!$module->module_status && $module->module_installed)
+            if(!$module->module_status)
             {
                 $module->module_status = 1;
                 $module->module_is_enabled = 1;
                 $module->save();
                 return true;
             }
-            /* This module has alreay enable*/
             return false;
         }
-        /* This module not found in database*/
         return false;
     }
 
 
     /**
      * Disable module
-     * @param name string
-     * @return boolean
+     *
+     * @param string $moduleName
+     * @return bool
      */
-    public function disable($name)
+    public function disable($moduleName)
     {
-        $module = $this->findOrFalse('module_name', $name);
+        $module = $this->findOrFalse('module_name', $moduleName);
         if ($module)
         {
-            if($module->module_status && $module->module_installed)
+            if ($module->module_status)
             {
                 $module->module_status = 0;
                 $module->save();
-                $this->app['events']->fire('modules.disable.'.$name, null);
+                $this->app['events']->fire('modules.disable.'.$moduleName, null);
                 return true;
             }
-            /* This module has already disable*/
-            return false;
-        }
-        /* This module not found in database*/
-        return false;
-    }
-
-    /**
-     * Reset configuration module
-     * @param name string
-     * @return boolean
-     */
-    public function reset($name)
-    {
-        $module = $this->findOrFalse('module_name', $name);
-        if ($module)
-        {
-            if($module->module_status && $module->module_installed)
-            {
-                $this->app['events']->fire('modules.reset.'.$name, null);
-                $module->module_status = 0;
-                $module->save();
-                $this->app['events']->fire('modules.disable.'.$name, null);
-                return true;
-            }
-            /* This module is disable or uninstalled and can not be reset*/
             return false;
         }
         return false;
@@ -231,6 +215,7 @@ class CheeModule
 
     /**
      * Get all list modules
+     *
      * @return object
      */
     public function getListAllModules()
@@ -240,20 +225,31 @@ class CheeModule
     }
 
     /**
-     * Get customize list modules
-     * @param $status boolean
-     * @param $installed boolean
+     * Get list of enabled modules
+     *
      * @return object
      */
-    public function getListCustomModules($status = 1, $installed = 1)
+    public function getListEnabledModules()
     {
-        $modulesModel = ModuleModel::where('module_status', $status)->where('module_installed', $installed)->get();
+        $modulesModel = ModuleModel::where('module_status', 1)->get();
+        return $this->getListModules($modulesModel);
+    }
+
+    /**
+     * Get list of disabled modules
+     *
+     * @return object
+     */
+    public function getListDisabledModules()
+    {
+        $modulesModel = ModuleModel::where('module_status', 0)->get();
         return $this->getListModules($modulesModel);
     }
 
     /**
      * Get list modules
-     * @param $modulesModel model
+     *
+     * @param model $modulesModel
      * @return array
      */
     protected function getListModules($modulesModel)
@@ -273,20 +269,22 @@ class CheeModule
 
     /**
      * Move contents assets module to public directory
-     * @param $name string
-     * @return boolean
+     *
+     * @param string $moduleName
+     * @return bool
      */
-    public function buildAssets($name)
+    public function buildAssets($moduleName)
     {
-        $module = $this->getModuleDirectory($name);
+        $module = $this->getModuleDirectory($moduleName);
         if ($module)
         {
             $module .= '/assets';
             if ($this->files->exists($module))
             {
-                if (!@$this->files->copyDirectory($module, $this->getAssetDirectory($name)))
+                if (!@$this->files->copyDirectory($module, $this->getAssetDirectory($moduleName)))
                 {
-                    return false; //Can not make directory
+                    $this->errors->add('build_assets', 'Unable to build assets');
+                    return false;
                 }
             }
             return true;
@@ -296,17 +294,18 @@ class CheeModule
 
     /**
      * Remove assets of a module
-     * @param $name string
+     *
+     * @param string $moduleName
      * @return bool
      */
-    public function removeAssets($name)
+    public function removeAssets($moduleName)
     {
-        $assets = $this->getAssetDirectory($name);
+        $assets = $this->getAssetDirectory($moduleName);
 
         $this->files->deleteDirectory($assets);
         if ($this->files->exists($assets))
         {
-            $this->errors['delete']['forbidden']['assets'] = $assets;
+            $this->errors->add('delete_assets', 'Unable to delete assets in: '.$assets);
             return false;
         }
         return true;
@@ -314,391 +313,239 @@ class CheeModule
 
     /**
      * Remove module directory
-     * @param $name
-     * @return boll
+     *
+     * @param string $moduleName
+     * @return bool
      */
-    protected function removeModuleDirectory($name)
+    protected function removeModuleDirectory($moduleName)
     {
-        $this->files->deleteDirectory($this->getModuleDirectory($name));
-        if($this->files->exists($this->getModuleDirectory($name)))
+        $this->files->deleteDirectory($this->getModuleDirectory($moduleName));
+        if($this->files->exists($this->getModuleDirectory($moduleName)))
         {
-            $this->errors['delete']['forbidden']['module'] = $this->getModuleDirectory($name);
+            $this->errors->add('delete_files', 'Unable to delete '.$this->getModuleDirectory($moduleName));
             return false;
         }
         return true;
     }
 
     /**
-     * Install module and build assets
-     * @param $name string
+     * Check system dependency
+     *
+     * @param string $version
      * @return bool
      */
-    public function install($name)
+    protected function sysVersionDependency($version)
     {
-        $module = $this->findOrFalse('module_name', $name);
-        if ($module)
+        $sysVersion = new Version($this->sysMajorVersion.'.'.$this->sysMinorVersion.'.'.$this->sysPathVersion);
+        $needVersion = new Version($version);
+
+        if (!$sysVersion->isPartOf($needVersion))
         {
-            if (!$module->module_installed)
-            {
-                //Check require version for system and module dependecies
-                $cheeCommerceRequire = $this->def($name, $this->systemName);
-                $moduleDependency = $this->def($name, 'require');
-
-                $cheeCommerceRequire = $this->CheeCommerceCompliancy($cheeCommerceRequire);
-                $moduleDependency = $this->checkStrictDependency($moduleDependency);
-
-                if (!$cheeCommerceRequire || !$moduleDependency)
-                {
-                    return false;
-                }
-
-                if (!$this->installProccess($module))
-                {
-                    return false;
-                }
-                return true;
-            }
+            $this->errors->add('module_dependency_sys', 'This module not made for current version of '.$this->systemName.', made for '.$version);
+            return false;
         }
         return false;
     }
 
     /**
-     * Force install a module without check version of dependencies and version of system
-     * @param $name string
+     * Check module dependencies
+     *
+     * @param array $dependencies
      * @return bool
      */
-    public function forceInstall($name)
-    {
-        $module = $this->findOrFalse('module_name', $name);
-        if ($module)
-        {
-            if (!$module->module_installed)
-            {
-                //Check module dependecies is installed
-                $moduleDependency = $this->def($name, 'require');
-                $moduleDependency = $this->checkDependency($moduleDependency);
-
-                if (!$moduleDependency)
-                {
-                    return false;
-                }
-
-                if (!$this->installProccess($module))
-                {
-                    return false;
-                }
-                return true;
-
-            }
-        }
-        return false;
-    }
-
-    protected function installProccess($module)
-    {
-        $module->module_installed = 1;
-        $module->module_status = 1;
-        $module->module_is_enabled = 1;
-        $module->module_is_installed = 1;
-        $module->save();
-        $this->buildAssets($module->module_name);
-        return true;
-    }
-
-    /**
-     * Check Chee Commerce Compliancy
-     * @param $version string CheeCommerce version entered by module developer in module.json
-     * @param bool
-     */
-    public function CheeCommerceCompliancy($version)
-    {
-        $error = array();
-
-        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version['min'], $min);
-        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version['max'], $max);
-
-        if (!count($min) || !count($max))
-        {
-            $error['module.json'] = "module.json of this module is corrupted.";
-            $this->errors = $error;
-            return false;
-        }
-
-        $min = $min[0];
-        $max = $max[0];
-
-
-        $minMajorOffset = strpos($min, '.');
-        $minMajor = substr($min, 0, $minMajorOffset);
-
-        $minMinorOffset = strpos($min, '.', $minMajorOffset + 1);
-        $minMinor = substr($min, $minMajorOffset + 1, $minMinorOffset - $minMajorOffset - 1);
-
-        $minPathOffset = $minMinorOffset + 1;
-        $minPath = substr($min, $minMinorOffset + 1, strlen($min) - $minMinorOffset);
-
-        $maxMajorOffset = strpos($max, '.');
-        $maxMajor = substr($max, 0, $maxMajorOffset);
-
-        $maxMinorOffset = strpos($max, '.', $maxMajorOffset + 1);
-        $maxMinor = substr($max, $maxMajorOffset + 1, $maxMinorOffset - $maxMajorOffset - 1);
-
-        $maxPathOffset = $maxMinorOffset + 1;
-        $maxPath = substr($max, $maxMinorOffset + 1, strlen($max) - $maxMinorOffset);
-
-        //Check min version
-        if ($minMajor !== ANY)
-        {
-            if ($this->sysMajorVersion < (int) $minMajor)
-            {
-                $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-            }
-            elseif ($this->sysMajorVersion === (int) $minMajor)
-            {
-                if ($this->sysMinorVersion < (int) $minMinor)
-                {
-                    $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-                }
-                elseif ($this->sysMinorVersion === (int) $minMinor)
-                {
-                    if ($this->sysPathVersion < (int) $minPath)
-                    {
-                        $error['min'] = 'Minimum Chee Commerce release for this module is v'.$version['min'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-                    }
-                }
-            }
-        }
-
-        //Check max version
-        if ($maxMajor !== ANY)
-        {
-            if ($this->sysMajorVersion > (int) $maxMajor)
-            {
-                $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-            }
-            elseif ($this->sysMajorVersion === (int) $maxMajor)
-            {
-                if ($maxMinor !== ANY && $this->sysMinorVersion > (int) $maxMinor)
-                {
-                    $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-                }
-                elseif ($this->sysMinorVersion === (int) $maxMinor)
-                {
-                    if ($maxPath !== ANY && $this->sysPathVersion > (int) $maxPath)
-                    {
-                        $error['max'] = 'Maximum Chee Commerce release for this module is v'.$version['max'].' but Chee Commerce v'.$this->sysVersion.' is installed';
-                    }
-                }
-            }
-        }
-
-        if (count($error))
-        {
-            $this->errors['dependecies'][$this->systemName] = $error;
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Check module dependency and this versions
-     * @param dependencies array
-     * @return bool
-     */
-    public function checkStrictDependency($dependencies)
-    {
-        $errors = array();
-
-        if(is_null($dependencies)) $dependencies = array();
-
-        foreach ($dependencies as $module => $version)
-        {
-            $deModule = ModuleModel::where('module_name', $module)->first();
-            if ($deModule)
-            {
-                preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$version, $version);
-
-                if (!count($version))
-                {
-                    $error['module.json'] = "module.json of this module is corrupted.";
-                    $this->errors = $error;
-                    return false;
-                }
-
-                $version = $version[0];
-
-                $majorOffset = strpos($deModule->version, '.');
-                $major = substr($deModule->version, 0, $majorOffset);
-
-                $minorOffset = strpos($deModule->version, '.', $majorOffset + 1);
-                $minor = substr($deModule->version, $majorOffset + 1, $minorOffset - $majorOffset - 1);
-
-                $path = substr($deModule->version, $minorOffset + 1, strlen($deModule->version) - $minorOffset);
-
-                $deMajorOffset = strpos($version, '.');
-                $deMajor = substr($version, 0, $deMajorOffset);
-
-                $deMinorOffset = strpos($version, '.', $deMajorOffset + 1);
-                $deMinor = substr($version, $deMajorOffset + 1, $deMinorOffset - $deMajorOffset - 1);
-
-                $dePath = substr($version, $deMinorOffset + 1, strlen($version) - $deMinorOffset);
-
-                //Check dependency version
-                if ($deMajor !== ANY)
-                {
-                    if ((int) $major !== (int) $deMajor)
-                    {
-                        $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
-                    }
-                    elseif ((int) $major === (int) $deMajor)
-                    {
-                        if ($deMinor !== ANY && (int) $minor !== (int) $deMinor)
-                        {
-                            $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
-                        }
-                        elseif ((int) $minor === (int) $deMinor)
-                        {
-                            if ($dePath !== ANY && (int) $path !== (int) $dePath)
-                            {
-                                $errors['up/downgrade'][$module.'#'.$version] = $module.' v'.$version.' but v'.$deModule->version.' installed';
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
-            }
-        }
-        if(count($errors))
-        {
-            $this->errors['dependecies']['modules'] = $errors;
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Check module dependency
-     * @param dependencies array
-     * @return bool
-     */
-    protected function checkDependency($dependencies)
+    protected function checkDependency($dependencies = null)
     {
         $errors = array();
 
         if (is_null($dependencies)) $dependencies = array();
 
+        $i = 0;
+        $clean = true;
         foreach ($dependencies as $module => $version)
         {
-            $deModule = ModuleModel::where('module_name', $module)->first();
-            if (!$deModule)
+            if ($module == $this->systemName)
             {
-                $errors['notinstalled'][$module.'#'.$version] = $module.' v'.$version.' but not installed';
+                if (!$this->sysVersionDependency($version))
+                    $clean = false;
+
+                continue;
             }
+
+            $depModule = ModuleModel::where('module_name', $module)->first();
+            if (!$depModule)
+            {
+                $this->errors->add("module_dependency_$i", "Module $module not installed");
+                $clean = false;
+            }
+            else
+            {
+                $depVersion = $depModule->module_version;
+                $needVersion = $version;
+
+                $depVersion = new Version($depVersion);
+                $needVersion = new Version($needVersion);
+
+                if (!$depVersion->isPartOf($needVersion))
+                {
+                    $this->errors->add("module_dependency_$i", 'Module '.$module.' v'.$needVersion->getVersion().' must install, but '.$depVersion->getVersion().' installed.');
+                    $clean = false;
+                }
+            }
+            $i++;
         }
 
-        if(count($errors))
+        if(!$clean)
+            return false;
+
+        return true;
+    }
+
+    /**
+     * Accesss to errors object
+     *
+     * @return Illuminate\Support\MessageBag
+     */
+    public function getErrors()
+    {
+        $errors = $this->errors;
+        $this->errors = new MessageBag;
+        return $errors;
+    }
+
+    /**
+     * Uninstall module and remove assets
+     *
+     * @param string $moduleName
+     * @return bool
+     */
+    public function uninstall($moduleName)
+    {
+        $module = $this->findOrFalse('module_name', $moduleName);
+        if ($module)
         {
-            $this->errors['dependecies']['modules'] = $errors;
+            $this->app['events']->fire('modules.uninstall.'.$moduleName, null);
+
+            $module->delete();
+
+            if (!$this->removeAssets($moduleName))
+                $this->errors->add('delete_assets', "Unable to delete assets $moduleName");
+
+            if (!$this->removeModuleDirectory($moduleName))
+                $this->errors->add('delete_module', "Unable to delete $moduleName");
+
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Install module and build assets
+     *
+     * @param string $moduleName
+     * @param string path of module
+     * @return bool
+     */
+    public function install($tempPath, $moduleName)
+    {
+        //Check module dependecies
+        $moduleDependency = $this->def($tempPath, 'require', true);
+        if (!$moduleDependency = $this->checkDependency($moduleDependency))
+            return false;
+
+        //Move extracted module to modules path
+        if (!$this->files->copyDirectory($tempPath, $this->path.'/'.$moduleName))
+        {
+            $this->errors->add('move_files_permission_denied', 'Permission denied in: '.$this->path.'/'.$moduleName);
+            return false;
+        }
+
+        $this->buildAssets($moduleName);
+        if (!$this->registerModule($moduleName))
+        {
+            $this->errors->add('register_module', 'Error in register module');
             return false;
         }
         return true;
     }
 
     /**
-     * Send errors
-     * @return array
+     * Register module
+     *
+     * @param string $moduleName
+     * @return bool
      */
-    public function getErrors()
+    protected function registerModule($moduleName)
     {
-        return $this->errors;
-        $this->errors = array();
+        $module = new ModuleModel;
+        $module->module_name = $this->def($moduleName, 'name');
+        $module->module_version = $this->def($moduleName, 'version');
+        $module->module_status = 0;
+        $module->module_is_enabled = 0;
+        $module->module_is_installed = 1;
+        $module->save();
+
+        return true;
     }
 
     /**
-     * Uninstall module and remove assets files but keep module files for install again
-     * @param $name string
-     * @return boolean
+     * Update metadate of module updated
+     *
+     * @param string $moduleName
+     * @return void
      */
-    public function uninstall($name)
+    protected function updateRegisteredModule($moduleName)
     {
-        $module = $this->findOrFalse('module_name', $name);
-        if ($module)
-        {
-            if ($module->module_installed)
-            {
-                if ($module->module_status)
-                {
-                    $this->app['events']->fire('modules.disable.'.$name, null);
-                    $module->module_status = 0;
-                }
-                $this->app['events']->fire('modules.uninstall.'.$name, null);
-                $module->module_installed = 0;
-                $module->save();
-                return true;
-            }
-        }
-        return false;
+        $module = $this->findOrFalse('module_name', $moduleName);
+        $module->module_version = $this->def($moduleName, 'version');
+        $module->module_is_updated = 1;
+        $module->save();
     }
+
 
     /**
      * Initialize zip module
-     * @param $archive string path of zip
-     * @param $moduleName string
+     *
+     * @param string $archive path of module zip
      * @return bool
      */
     public function zipInit($archive)
     {
-        //Extract zip
-        $extractPath = $this->getAssetDirectory().'/#tmp/'.uniqid();
-        $archive = $this->extractZip($archive, $extractPath);
-        if (!$archive)
-        {
-            return false;
-        }
+        $tempPath = $this->getAssetDirectory().'/#tmp/'.uniqid();
 
-        //Delete uploaded zip directory
-        $this->files->delete($archive->zipname);
-        if ($this->files->exists($archive->zipname))
-        {
-            $this->errors['zipinit']['forbidden']['delete'] = 'Can not delete directory.'.$archive->zipname;
-        }
+        $result = $this->traceZip($archive, $tempPath);
 
-        $archivePath = $extractPath;
-
-        //Check module has requires file
-        if (!$this->checkRequires($archivePath))
-        {
-            $this->errors['zipinit']['requires'] = 'This package has not required files';
-            $result = false;
-        }
-        else
-        {
-            $moduleName = $this->def($archivePath.$this->configFile, 'name', true);
-            if ($this->moduleExists($moduleName))
-            { //Upgrade
-                $result =  $this->update($archivePath, $moduleName);
-            }
-            else
-            { //Install
-                $result =  $this->moduleInit($archivePath, $moduleName);
-            }
-        }
-
-        //Delete extracted zip directory
-        if (!$this->files->deleteDirectory($archivePath))
-        {
-            $this->errors['zipinit']['forbidden']['delete'] = 'Can not delete directory.'.$updateModuleDir;
-        }
-
+        $this->files->deleteDirectory($tempPath);
         return $result;
     }
 
     /**
+     * Step by Step to install or update a module zip
+     *
+     * @param string $archive path of zip
+     * @param string $archivePath
+     * @return bool
+     */
+    protected function traceZip($archive, $tempPath)
+    {
+        if (!$archive = $this->extractZip($archive, $tempPath, true))
+            return false;
+
+        //Check module has requires file
+        if (!$this->checkRequires($tempPath))
+            return false;
+        $moduleName = $this->def($tempPath, 'name', true);
+
+        if ($this->moduleExists($moduleName))
+            return $this->update($tempPath, $moduleName);
+
+        else
+            return $this->install($tempPath, $moduleName);
+    }
+
+    /**
      * Check module has required file
-     * @param $modulePath string
+     *
+     * @param string $modulePath
      * @return bool
      */
     protected function checkRequires($modulePath)
@@ -715,19 +562,26 @@ class CheeModule
                 {
                     if (is_array($jsonFile))
                     {
-                        if (!array_key_exists($key, $jsonFile)) return false;
-                        if (empty($jsonFile[$key])) return false;
+                        if (!array_key_exists($key, $jsonFile) || empty($jsonFile[$key]))
+                        {
+                            $this->errors->add('module_requires', 'This module has not requires files');
+                            return false;
+                        }
                     }
                     else
                     {
-                        $this->errors['checkRequires']['jsonFile'] = $this->configFile.' is corrupted.';
+                        $this->errors->add($this->configFile, $this->configFile.' is corrupted.');
                         return false;
                     }
                 }
             }
             else
             {
-                if (!$this->files->exists($modulePath.'/'.$value)) return false;
+                if (!$this->files->exists($modulePath.'/'.$value))
+                {
+                    $this->errors->add('module_requires', 'This module has not requires files');
+                    return false;
+                }
             }
         }
         return true;
@@ -735,8 +589,9 @@ class CheeModule
 
     /**
      * Get configuration module
-     * @param $item string
-     * @param $default null|mixed
+     *
+     * @param string $item
+     * @param null|mixed $default
      * @return mixed
      */
     protected function getConfig($item, $default = null)
@@ -744,150 +599,56 @@ class CheeModule
         return $this->config->get('module::'.$item, $default);
     }
 
-
-    /**
-     * Initialize zip module for install
-     * @param $archive string path of zip
-     * @param $moduleName string
-     * @return bool
-     */
-    protected function moduleInit($archivePath, $moduleName)
-    {
-        //Move extracted module to modules path
-        if (!$this->files->copyDirectory($archivePath, $this->path.'/'.$moduleName))
-        {
-            $this->errors['moduleInit']['move'] = 'Can not move files.';
-            return false;
-        }
-
-        $this->buildAssets($moduleName);
-
-        $module = new ModuleModel;
-        $module->module_name = $this->def($moduleName, 'name');
-        $module->module_version = $this->def($moduleName, 'version');
-        $module->save();
-
-        return true;
-    }
-
     /**
      * Update module
-    * @param $archive string path of zip
-    * @param $moduleName string
-    * @return bool
-    */
-    protected function update($archivePath, $moduleName)
+     *
+     * @param string $newModulePath path of zip
+     * @param string $moduleName
+     * @return bool
+     */
+    protected function update($newModulePath, $moduleName)
     {
-        //Check new version
-        $updateModuleDir =  $archivePath;
-        $ModuleDir = $this->getModuleDirectory($moduleName);
+        $curModulePath = $this->getModuleDirectory($moduleName);
 
-        $currentVersion = $this->def($moduleName, 'version');
-        $updateVersion = $this->def($updateModuleDir.$this->configFile, 'version', true);
-        if (!$this->isNewerVersion($currentVersion, $updateVersion))
+        $curVersion = $this->def($moduleName, 'version');
+        $newVersion = $this->def($newModulePath, 'version', true);
+
+        $curVersion = new Version($curVersion);
+        $newVersion = new Version($newVersion);
+
+        if (!$newVersion->greaterThan($curVersion))
         {
-            $this->errors['update']['version'] = 'This module has already been installed.';
+            $this->errors->add('update_version', 'Current version is greater than or equal uploaded version.');
             return false;
         }
 
         //Move and replace new version
-        $this->removeModuleDirectory($moduleName);
-        if (!$this->files->copyDirectory($updateModuleDir, $ModuleDir))
+        if (!$this->removeModuleDirectory($moduleName))
+            return false;
+
+        if (!$this->files->copyDirectory($newModulePath, $curModulePath))
         {
-            $this->errors['update']['move'] = 'Can not move files.';
+            $this->errors->add('move_files', 'Can not move new version files to '.$newModulePath);
             return false;
         }
 
         $this->removeAssets($moduleName);
         $this->buildAssets($moduleName);
 
-        //Update database for update hook
-        $this->updateRecordModule($moduleName);
+        $this->updateRegisteredModule($moduleName);
 
         return true;
     }
 
     /**
-     * Update record module in database
-     * @param $moduleName string
-     * @return void
-     */
-    protected function updateRecordModule($moduleName)
-    {
-        $module = $this->findOrFalse('module_name', $moduleName);
-        $module->module_version = $this->def($moduleName, 'version');
-        $module->module_is_updated = 1;
-        $module->save();
-    }
-
-    /**
-     * detect new version
-     * @param $currentVersion string
-     * @param $updateVersion string
-     * @return bool
-     */
-    protected function isNewerVersion($currentVersion, $updateVersion)
-    {
-        $errors = array();
-
-        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$currentVersion, $currentVersion);
-        preg_match("/(\d{1,}|[*])\.(\d{1,}|[*])\.(\d{1,}|[*])/", @$updateVersion, $updateVersion);
-
-        if (!count($currentVersion) || !count($updateVersion))
-        {
-            $error['module.json'] = "module.json of this module is corrupted.";
-            $this->errors = $error;
-            return false;
-        }
-
-        $currentVersion = $currentVersion[0];
-        $updateVersion = $updateVersion[0];
-
-        $curMajorOffset = strpos($currentVersion, '.');
-        $curMajor = (int) substr($currentVersion, 0, $curMajorOffset);
-
-        $curMinorOffset = strpos($currentVersion, '.', $curMajorOffset + 1);
-        $curMinor = (int) substr($currentVersion, $curMajorOffset + 1, $curMinorOffset - $curMajorOffset - 1);
-
-        $curPath = (int) substr($currentVersion, $curMinorOffset + 1, strlen($currentVersion) - $curMinorOffset);
-
-        $upMajorOffset = strpos($updateVersion, '.');
-        $upMajor = (int) substr($updateVersion, 0, $upMajorOffset);
-
-        $upMinorOffset = strpos($updateVersion, '.', $upMajorOffset + 1);
-        $upMinor = (int) substr($updateVersion, $upMajorOffset + 1, $upMinorOffset - $upMajorOffset - 1);
-
-        $upPath = (int) substr($updateVersion, $upMinorOffset + 1, strlen($updateVersion) - $upMinorOffset);
-
-        //Check dependency version
-        if ($upMajor > $curMajor)
-        {
-            return true;
-        }
-        elseif ($upMajor === $curMajor)
-        {
-            if ($upMinor > $curMinor)
-            {
-                return true;
-            }
-            elseif ($upMinor === $curMinor)
-            {
-                if ($upPath > $curPath)
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
      * Extract zip file
-     * @param $archive path of archive
-     * @param $target
-     * @param obj|false
+     *
+     * @param string $archive path of archive
+     * @param string $target
+     * @param bool $deleteSource
+     * @return Chee\Pclzip\Pclzip|false
      */
-    protected function extractZip($archive, $target)
+    protected function extractZip($archive, $target, $deleteSource = false)
     {
         if (!$this->files->exists($target))
         {
@@ -898,55 +659,36 @@ class CheeModule
 
         if ($archive->extract(PCLZIP_OPT_PATH, $target) == 0)
         {
-            $this->erros['extract'] = $archive->error_string;
+            $this->errors->add('extract_zip', $archive->error_string);
             return false;
         }
+
+        if ($deleteSource)
+            $this->files->delete($archive->zipname);
+
         return $archive;
     }
 
     /**
      * Check if module exists
-     * @param $name string
+     *
+     * @param string $moduleName
      * @return bool
      */
-    public function moduleExists($name)
+    public function moduleExists($moduleName)
     {
-        $module = $this->findOrFalse('module_name', $name);
+        $module = $this->findOrFalse('module_name', $moduleName);
         if ($module)
-        {
             return true;
-        }
-        return false;
-    }
 
-    /**
-     * Delete module and remove assets and module files
-     * @param $name string
-     * @return boolean
-     */
-    public function delete($name)
-    {
-        $module = $this->findOrFalse('module_name', $name);
-        if ($module)
-        {
-            $this->app['events']->fire('modules.disable.'.$name, null);
-            $this->app['events']->fire('modules.uninstall.'.$name, null);
-            $this->app['events']->fire('modules.delete.'.$name, null);
-            $module->delete();
-
-            $this->removeAssets($name);
-
-            $this->removeModuleDirectory($name);
-
-            return true;
-        }
         return false;
     }
 
     /**
      * Find one record from model
-     * @param $field string
-     * @param $name string
+     *
+     * @param string $field
+     * @param string $name
      * @return object|false
      */
     public function findOrFalse($field, $name) {
@@ -956,67 +698,47 @@ class CheeModule
 
     /**
      * Get path of specific module
-     * @param $name string name of module
-     * @return string
+     *
+     * @param string $moduleName name of module
+     * @return string|false
      */
-    public function getModuleDirectory($name)
+    public function getModuleDirectory($moduleName)
     {
-        if ($this->files->exists($this->path.'/'.$name))
-        {
-            return $this->path.'/'.$name;
-        }
+        if ($this->files->exists($this->path.'/'.$moduleName))
+            return $this->path.'/'.$moduleName;
+
         else
-        {
             return false;
-        }
     }
 
     /**
      * Get assets path of speciic module
-     * @param $name string name of module
+     *
+     * @param string|null $moduleName name of module
      * @return string
      */
-    public function getAssetDirectory($name = null)
+    public function getAssetDirectory($moduleName = null)
     {
-        if ($name)
-        {
-            return public_path().'/'.$this->getConfig('assets').'/'.$name;
-        }
+        if ($moduleName)
+            return public_path().'/'.$this->getConfig('assets').'/'.$moduleName;
+
         return public_path().'/'.$this->getConfig('assets').'/';
     }
 
     /**
-     * Check module name correct
-     * @param $path string path of the module
-     * @param $nameModule string name of the module
-     * @return true|false
-     */
-    protected function checkModuleName($path, $nameModule)
-    {
-        $definition = json_decode($this->files->get($path), true);
-        if (isset($definition['name']))
-        {
-            if ($definition['name'] == $nameModule)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Get module.json data of module
-     * @param $moduleName
-     * @param $key string key of array
-     * @param $isAddress string if first key is array second key can given
-     * @return array|string
+     *
+     * @param string $moduleName name of module or address of
+     * @param string $key key of array
+     * @param string $isAddress if first parameter is address this parameter should be true
+     * @return array|string|null
      */
     protected function def($moduleName, $key = null, $isAddress = false)
     {
         if($isAddress)
-            $definition = json_decode($this->app['files']->get($moduleName), true);
+            $definition = json_decode($this->app['files']->get($moduleName.$this->configFile), true);
         else
-            $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName) . $this->configFile), true);
+            $definition = json_decode($this->app['files']->get($this->getModuleDirectory($moduleName).$this->configFile), true);
 
         if ($key)
             if (isset($definition[$key]))

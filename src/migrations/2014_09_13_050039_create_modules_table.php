@@ -17,7 +17,6 @@ class CreateModulesTable extends Migration {
 			$table->increments('module_id');
 			$table->string('module_name', 150);
 			$table->string('module_version', 50);
-			$table->boolean('module_installed');
 			$table->boolean('module_status');
 			$table->boolean('module_is_enabled');
 			$table->boolean('module_is_installed');
