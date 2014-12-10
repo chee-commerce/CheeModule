@@ -373,7 +373,7 @@ class CheeModule
             $depModule = ModuleModel::where('module_name', $module)->first();
             if (!$depModule)
             {
-                $this->errors->add("module_dependency_$i", "Module $module not installed");
+                $this->errors->add("module_dependency_$i", "Module $module with version $version not installed");
                 $clean = false;
             }
             else
