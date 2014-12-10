@@ -422,6 +422,10 @@ class CheeModule
         $module = $this->findOrFalse('module_name', $moduleName);
         if ($module)
         {
+            $version = $this->def($moduleName, 'version');
+            if ($this->checkModuleDepends($moduleName, new Version($version)))
+                return false;
+
             $this->app['events']->fire('modules.uninstall.'.$moduleName, null);
 
             $module->delete();
@@ -621,6 +625,9 @@ class CheeModule
             return false;
         }
 
+        if ($this->checkModuleDepends($moduleName, $curVersion, $newVersion))
+            return false;
+
         //Move and replace new version
         if (!$this->removeModuleDirectory($moduleName))
             return false;
@@ -637,6 +644,47 @@ class CheeModule
         $this->updateRegisteredModule($moduleName);
 
         return true;
+    }
+
+    /**
+     * Check others modules depends to this module or not, when update or delete module
+     *
+     * @param string $moduleName
+     * @param Chee\Version\Version $curVersion for update required
+     * @param Chee\Version\Version $newVersion for delete not required
+     * @return bool
+     */
+    public function checkModuleDepends($moduleName, Version $curVersion, Version $newVersion = null)
+    {
+        $modules = ModuleModel::all();
+        $clean = true;
+        $i = 0;
+        foreach ($modules as $module)
+        {
+            $depends = $this->def($module->module_name, 'require');
+            if (array_key_exists($moduleName, $depends))
+            {
+                if (!is_null($newVersion)) //Check for update a module
+                {
+                    $dependVersion = new Version($depends[$moduleName]);
+                    if (!$newVersion->isPartOf($dependVersion))
+                    {
+                        $clean = false;
+                        $this->errors->add("module_depend_$i", "Can not update $moduleName, ".$module->module_name.' Depend to version '.$dependVersion->getOriginalVersion().' of '.$moduleName);
+                    }
+                }
+                else //Check for delete a module
+                {
+                    $clean = false;
+                    $this->errors->add("module_depend_$i", "Can not uninstall $moduleName, ".$module->module_name.' Depend this module.');
+                }
+            }
+            $i++;
+        }
+
+        if (!$clean)
+            return true;
+        return false;
     }
 
     /**
