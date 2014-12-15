@@ -215,7 +215,7 @@ class CheeModule
     /**
      * Get all list modules
      *
-     * @return object
+     * @return array
      */
     public function getListAllModules()
     {
@@ -226,7 +226,7 @@ class CheeModule
     /**
      * Get list of enabled modules
      *
-     * @return object
+     * @return array
      */
     public function getListEnabledModules()
     {
@@ -237,7 +237,7 @@ class CheeModule
     /**
      * Get list of disabled modules
      *
-     * @return object
+     * @return array
      */
     public function getListDisabledModules()
     {
@@ -559,7 +559,11 @@ class CheeModule
         {
             if (is_array($value))
             {
-                if (!$this->files->exists($modulePath.'/'.$key)) return false;
+                if (!$this->files->exists($modulePath.'/'.$key))
+                {
+                    $this->errors->add($this->configFile, $this->configFile.' is corrupted.');
+                    return false;
+                }
                 $jsonFile = json_decode($this->app['files']->get($modulePath.'/'.$key), true);
                 foreach($value as $key)
                 {
@@ -628,6 +632,10 @@ class CheeModule
         if ($this->checkModuleDepends($moduleName, $curVersion, $newVersion))
             return false;
 
+        $moduleDependency = $this->def($newModulePath, 'require', true);
+        if (!$moduleDependency = $this->checkDependency($moduleDependency))
+            return false;
+
         //Move and replace new version
         if (!$this->removeModuleDirectory($moduleName))
             return false;
@@ -656,12 +664,12 @@ class CheeModule
      */
     public function checkModuleDepends($moduleName, Version $curVersion, Version $newVersion = null)
     {
-        $modules = ModuleModel::all();
+        $modules = $this->getListAllModules();
         $clean = true;
         $i = 0;
         foreach ($modules as $module)
         {
-            $depends = $this->def($module->module_name, 'require');
+            $depends = $this->def($module['name'], 'require');
             if (array_key_exists($moduleName, $depends))
             {
                 if (!is_null($newVersion)) //Check for update a module
@@ -670,13 +678,13 @@ class CheeModule
                     if (!$newVersion->isPartOf($dependVersion))
                     {
                         $clean = false;
-                        $this->errors->add("module_depend_$i", "Can not update $moduleName, ".$module->module_name.' Depend to version '.$dependVersion->getOriginalVersion().' of '.$moduleName);
+                        $this->errors->add("module_depend_$i", "Can not update $moduleName, ".$module['name'].' Depend to version '.$dependVersion->getOriginalVersion().' of '.$moduleName);
                     }
                 }
                 else //Check for delete a module
                 {
                     $clean = false;
-                    $this->errors->add("module_depend_$i", "Can not uninstall $moduleName, ".$module->module_name.' Depend this module.');
+                    $this->errors->add("module_depend_$i", "Can not uninstall $moduleName, ".$module['name'].' Depend this module.');
                 }
             }
             $i++;
