@@ -667,9 +667,16 @@ class CheeModule
         $modules = $this->getListAllModules();
         $clean = true;
         $i = 0;
+        
         foreach ($modules as $module)
         {
-            $depends = $this->def($module['name'], 'require');
+            $depends = $this->def($module['name'], 'require', false, array());
+            if (!is_array($depends))
+            {
+                $this->errors->add($this->configFile, $this->configFile.' is corrupted.');
+                return false;
+            }
+
             if (array_key_exists($moduleName, $depends))
             {
                 if (!is_null($newVersion)) //Check for update a module
