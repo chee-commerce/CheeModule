@@ -786,9 +786,10 @@ class CheeModule
      * @param string $moduleName name of module or address of
      * @param string $key key of array
      * @param string $isAddress if first parameter is address this parameter should be true
+     * @param mixed $default
      * @return array|string|null
      */
-    protected function def($moduleName, $key = null, $isAddress = false)
+    protected function def($moduleName, $key = null, $isAddress = false, $default = null)
     {
         if($isAddress)
             $definition = json_decode($this->app['files']->get($moduleName.$this->configFile), true);
@@ -799,7 +800,7 @@ class CheeModule
             if (isset($definition[$key]))
                 return $definition[$key];
             else
-                return null;
+                return $default;
         else
             return $definition;
     }
