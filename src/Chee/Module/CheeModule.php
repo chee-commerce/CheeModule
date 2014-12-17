@@ -509,40 +509,46 @@ class CheeModule
      * Initialize zip module
      *
      * @param string $archive path of module zip
+     * @param callback|null $callback parameters: bool $result, string $moduleName
      * @return bool
      */
-    public function zipInit($archive)
+    public function zipInit($archive, $callback = null)
     {
         $tempPath = $this->getAssetDirectory().'/#tmp/'.uniqid();
 
         $result = $this->traceZip($archive, $tempPath);
 
         $this->files->deleteDirectory($tempPath);
-        return $result;
+
+        if (!is_null($callback))
+            call_user_func($callback, $result[0], $result[1]);
+
+        return $result[0];
     }
 
     /**
      * Step by Step to install or update a module zip
      *
      * @param string $archive path of zip
-     * @param string $archivePath
-     * @return bool
+     * @param string $tempPath path of extract zip
+     * @return array array(bool $result, string $moduleName)
      */
     protected function traceZip($archive, $tempPath)
     {
         if (!$archive = $this->extractZip($archive, $tempPath, true))
-            return false;
+            return array(false, null);
 
         //Check module has requires file
         if (!$this->checkRequires($tempPath))
-            return false;
+            return array(false, null);
+
         $moduleName = $this->def($tempPath, 'name', true);
 
         if ($this->moduleExists($moduleName))
-            return $this->update($tempPath, $moduleName);
+            return array($this->update($tempPath, $moduleName), $moduleName);
 
         else
-            return $this->install($tempPath, $moduleName);
+            return array($this->install($tempPath, $moduleName), $moduleName);
     }
 
     /**
@@ -667,7 +673,7 @@ class CheeModule
         $modules = $this->getListAllModules();
         $clean = true;
         $i = 0;
-        
+
         foreach ($modules as $module)
         {
             $depends = $this->def($module['name'], 'require', false, array());
