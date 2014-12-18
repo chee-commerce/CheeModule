@@ -741,13 +741,19 @@ class CheeModule
      * Check if module exists
      *
      * @param string $moduleName
+     * @param bool $returnId
      * @return bool
      */
-    public function moduleExists($moduleName)
+    public function moduleExists($moduleName, $returnId = false)
     {
         $module = $this->findOrFalse('module_name', $moduleName);
         if ($module)
-            return true;
+        {
+            if ($returnId)
+                return $module->module_id;
+            else
+                return true;
+        }
 
         return false;
     }
