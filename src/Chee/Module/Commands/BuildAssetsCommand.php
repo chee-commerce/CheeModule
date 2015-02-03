@@ -1,10 +1,10 @@
 <?php namespace Chee\Module\Commands;
 
-use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Illuminate\Foundation\Application;
 use Chee\Module\Models\ModuleModel;
+use Illuminate\Console\Command;
 use Chee\Module\CheeModule;
 
 class BuildAssetsCommand extends AbstractCommand
@@ -19,7 +19,7 @@ class BuildAssetsCommand extends AbstractCommand
      * Command description
      * @var string
      */
-    protected $description = 'move module assets to public folder';
+    protected $description = 'Move assets directory to public';
 
     public function fire()
     {

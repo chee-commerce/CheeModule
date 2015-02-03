@@ -26,9 +26,9 @@ class ListCommand extends AbstractCommand
     {
         $this->info('CheeModule Commands:');
         $this->info('-----------------------------------------------------------------------------------------------------------------------------');
-        $this->info('| CheeModule::create      | Create a new module for development. | eg: php artisan CheeModule::create name=moduleName');
+        $this->info('| CheeModule:create      | Create a new module for development  | eg: php artisan CheeModule:create name=moduleName');
         $this->info('-----------------------------------------------------------------------------------------------------------------------------');
-        $this->info('| CheeModule::buildAssets | Move assets directory to public.     | eg: php artisan CheeModule::buildAssets name=moduleName');
+        $this->info('| CheeModule:buildAssets | Move assets directory to public      | eg: php artisan CheeModule:buildAssets name=moduleName');
         $this->info('-----------------------------------------------------------------------------------------------------------------------------');
         $this->info('');
     }

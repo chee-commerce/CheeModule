@@ -1,10 +1,10 @@
 <?php namespace Chee\Module\Commands;
 
-use Illuminate\Console\Command;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Illuminate\Foundation\Application;
 use Chee\Module\Models\ModuleModel;
+use Illuminate\Console\Command;
 
 class CreateCommand extends AbstractCommand
 {
@@ -18,7 +18,7 @@ class CreateCommand extends AbstractCommand
 	 * Command description
 	 * @var string
 	 */
-	protected $description = 'Create a new dev module for CheeModule manager.';
+	protected $description = 'Create a new module for development';
 
 
     /**
@@ -90,7 +90,7 @@ class CreateCommand extends AbstractCommand
         $model = new ModuleModel;
         $model->module_name = $name;
         $model->module_status = 0;
-        $module->module_is_enabled = 0;
+        $model->module_is_enabled = 0;
         $model->module_is_installed = 1;
         $model->module_version = '0.0.1';
         $model->save();
