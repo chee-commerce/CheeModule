@@ -90,10 +90,11 @@ class CreateCommand extends AbstractCommand
         $model = new ModuleModel;
         $model->module_name = $name;
         $model->module_status = 0;
-        $model->module_installed = 0;
+        $module->module_is_enabled = 0;
+        $model->module_is_installed = 1;
         $model->module_version = '0.0.1';
         $model->save();
-        $this->error('This module has been disabled and uninstalled.');
+        $this->error('This module has been disabled.');
     }
 
     /**
