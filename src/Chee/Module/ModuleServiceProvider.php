@@ -68,10 +68,22 @@ class ModuleServiceProvider extends ServiceProvider
 			return new Commands\BuildAssetsCommand($app);
 		});
 
+		$this->app['CheeModule.installEvent'] = $this->app->share(function($app)
+		{
+			return new Commands\InstallEventCommand($app);
+		});
+
+		$this->app['CheeModule.uninstallEvent'] = $this->app->share(function($app)
+		{
+			return new Commands\UninstallEventCommand($app);
+		});
+
 		$this->commands(array(
 			'CheeModule',
 			'CheeModule.create',
 			'CheeModule.buildAssets',
+			'CheeModule.installEvent',
+			'CheeModule.uninstallEvent'
 		));
 	}
 
